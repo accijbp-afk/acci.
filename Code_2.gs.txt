@@ -1,0 +1,1561 @@
+// ============================================================
+// ACCI — Google Apps Script Backend (Fixed)
+// ============================================================
+
+const VENDOR_SHEET_ID  = "17ioUwvFn9nNWxJJxjE7iEGtJCLUqvx0RieuGOb_iHCg";
+const USER_SHEET_ID    = "1P-No8d9zGWvcp7GICbmHaaHLtCc7ZRBciV_CRyYJpOQ";
+const ADMIN_EMAIL      = "cto@lawgicalstartup.com";
+const ADMIN_PASSWORD   = "Rounak@cto1234";
+const NOTIFY_EMAIL     = "accijabalpur@gmail.com"; // receives new user/vendor signup alerts
+
+const TABS = {
+  users:   "Users",
+  vendors: "Vendors",
+  jobs:    "Jobs",
+  events:  "Events",
+  gallery: "Gallery"
+};
+
+// ── RESPONSE HELPER (FIXED) ───────────────────────────────
+function makeResponse(data) {
+  var output = ContentService.createTextOutput(JSON.stringify(data));
+  output.setMimeType(ContentService.MimeType.JSON);
+  return output;
+}
+
+// ── MAIN ROUTER ───────────────────────────────────────────
+function doPost(e) {
+  try {
+    var body   = JSON.parse(e.postData.contents);
+    var action = body.action;
+    var result;
+
+    switch(action) {
+      case "registerUser":       result = registerUser(body);       break;
+      case "loginUser":          result = loginUser(body);          break;
+      case "submitVendor":       result = submitVendor(body);       break;
+      case "postJob":            result = postJob(body);            break;
+      case "addEvent":           result = addEvent(body);           break;
+      case "addGalleryPhoto":    result = addGalleryPhoto(body);    break;
+      case "updateVendorStatus": result = updateVendorStatus(body); break;
+      case "deleteRow":            result = deleteRow(body);              break;
+      case "updateVendor":          result = updateVendor(body);          break;
+      case "addReview":             result = addReview(body);             break;
+      case "addPlatformFeedback":   result = addPlatformFeedback(body);   break;
+      case "uploadPhoto":           result = uploadPhoto(body);           break;
+      case "addCategory":           result = addCategory(body);           break;
+      case "deleteCategory":        result = deleteCategory(body);        break;
+      case "addIndustry":           result = addIndustry(body);           break;
+      case "deleteIndustry":        result = deleteIndustry(body);        break;
+      case "addImpactStory":        result = addImpactStory(body);        break;
+      case "updateImpactStoryStatus": result = updateImpactStoryStatus(body); break;
+      case "addWorkInquiry":        result = addWorkInquiry(body);        break;
+      case "updateReviewStatus":    result = updateReviewStatus(body);    break;
+      case "updateSiteContent":     result = updateSiteContent(body);     break;
+      default: result = { ok: false, msg: "Unknown action: " + action };
+    }
+    return makeResponse(result);
+  } catch(err) {
+    return makeResponse({ ok: false, msg: err.toString() });
+  }
+}
+
+function doGet(e) {
+  try {
+    var action = e.parameter.action;
+    var result;
+
+    switch(action) {
+      case "getVendors":    result = getVendors(e.parameter);    break;
+      case "getJobs":       result = getJobs(e.parameter);       break;
+      case "getEvents":     result = getEvents();                break;
+      case "getGallery":    result = getGallery();               break;
+      case "getStats":      result = getStats();                 break;
+      case "getUsers":      result = getUsers(e.parameter);      break;
+      case "getAllVendors":  result = getAllVendors(e.parameter); break;
+      case "getAllJobs":          result = getAllJobsAdmin(e.parameter);    break;
+      case "getVendorsByUser":   result = getVendorsByUser(e.parameter);  break;
+      case "getReviews":         result = getReviews(e.parameter);        break;
+      case "getAllReviews":       result = getAllReviews(e.parameter);     break;
+      case "getAllPlatformFeedback": result = getAllPlatformFeedback(e.parameter); break;
+      case "getCategories":      result = getCategories();               break;
+      case "getIndustries":      result = getIndustries();               break;
+      case "getAllImpactStories":result = getAllImpactStories(e.parameter); break;
+      case "getWorkInquiries":   result = getWorkInquiries(e.parameter);  break;
+      case "getApprovedImpactStories": result = getApprovedImpactStories();   break;
+      case "getSiteContent":     result = getSiteContent(e.parameter);    break;
+      case "getHomeInit":        result = getHomeInit(e.parameter);      break;
+      default: result = { ok: false, msg: "Unknown action: " + action };
+    }
+    return makeResponse(result);
+  } catch(err) {
+    return makeResponse({ ok: false, msg: err.toString() });
+  }
+}
+
+// ============================================================
+// SHEET HELPERS
+// ============================================================
+
+function getSheet(sheetId, tabName) {
+  var ss    = SpreadsheetApp.openById(sheetId);
+  var sheet = ss.getSheetByName(tabName);
+  if (!sheet) {
+    sheet = ss.insertSheet(tabName);
+    initHeaders(sheet, tabName);
+  }
+  return sheet;
+}
+
+function initHeaders(sheet, tabName) {
+  var headers = {
+    Users:   ["ID","FirstName","LastName","Email","Phone","City","PasswordHash","Role","CreatedAt","LastLogin"],
+    Vendors: ["ID","UserID","BusinessName","LegalName","OwnerName","IncomeType","Category","Industry","Description","DetailedProfile","Tagline","Phone","WhatsApp","Email","Website","Social","Address","City","PINCode","MapsLink","Timing","GST","EstYear","Employees","ServiceCategories","ProductCategories","Awards","Plan","Status","SubmittedAt","ApprovedAt","Featured","Rating","ReviewCount","WorkPhotos","LogoUrl"],
+    Jobs:    ["ID","UserID","Company","Title","Category","JobType","Urgency","Salary","Location","Description","Skills","Contact","Status","PostedAt","ContactEmail","ContactWhatsApp"],
+    Events:  ["ID","Title","Category","Date","Time","Venue","Description","ImageURL","BgColor","CreatedAt"],
+    Gallery: ["ID","Title","ImageURL","Album","BgColor","CreatedAt"]
+  };
+  if (headers[tabName]) {
+    sheet.getRange(1, 1, 1, headers[tabName].length).setValues([headers[tabName]]);
+    sheet.getRange(1, 1, 1, headers[tabName].length).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+  }
+}
+
+function generateID(prefix) {
+  return prefix + "_" + new Date().getTime() + "_" + Math.floor(Math.random() * 1000);
+}
+
+function hashPassword(pw) {
+  var hash = 0;
+  for (var i = 0; i < pw.length; i++) {
+    var chr = pw.charCodeAt(i);
+    hash = ((hash << 5) - hash) + chr;
+    hash |= 0;
+  }
+  return "h_" + Math.abs(hash).toString(36) + pw.length;
+}
+
+function sheetToObjects(sheet) {
+  var data = sheet.getDataRange().getValues();
+  if (data.length < 2) return [];
+  var headers = data[0];
+  var results = [];
+  for (var i = 1; i < data.length; i++) {
+    if (!data[i][0]) continue; // skip empty rows
+    var obj = { _row: i + 1 };
+    for (var j = 0; j < headers.length; j++) {
+      obj[headers[j]] = data[i][j];
+    }
+    results.push(obj);
+  }
+  return results;
+}
+
+function verifyAdmin(token) {
+  return token === "ACCI_ADMIN_" + hashPassword(ADMIN_PASSWORD);
+}
+
+// Sends an email alert to NOTIFY_EMAIL — wrapped in try/catch so a quota
+// or permission issue never blocks the actual registration/listing flow.
+function notifyAdmin(subject, body) {
+  try {
+    MailApp.sendEmail({
+      to: NOTIFY_EMAIL,
+      subject: "[ACCI] " + subject,
+      body: body
+    });
+  } catch (e) {
+    Logger.log("notifyAdmin failed: " + e);
+  }
+}
+
+// ── SCRIPT CACHE ──────────────────────────────────────────────
+// SpreadsheetApp.openById + scanning every row (sheetToObjects) is the
+// single slowest thing this script does — it's a real disk/network op on
+// Google's side, not just CPU, and it happens on almost every page load
+// (getStats, getCategories, getIndustries, getVendors all do it). Since
+// this data changes rarely (an admin edit, a new approval) but is read on
+// every visit, caching it for a short window turns most homepage loads
+// into a cache hit instead of a fresh sheet scan. This is the biggest
+// lever available without moving off Sheets entirely.
+function getCache_(key) {
+  try {
+    var v = CacheService.getScriptCache().get(key);
+    return v ? JSON.parse(v) : null;
+  } catch (e) { return null; }
+}
+function setCache_(key, value, seconds) {
+  try { CacheService.getScriptCache().put(key, JSON.stringify(value), seconds || 120); } catch (e) { /* value too large or cache unavailable — just skip caching this time */ }
+}
+function clearCache_(keys) {
+  try { CacheService.getScriptCache().removeAll(keys); } catch (e) {}
+}
+
+// ── COLUMN LOOKUP BY HEADER NAME ─────────────────────────────
+// Several functions used to write to hardcoded column numbers (e.g.
+// "Featured is column 32") that only hold true if the live sheet's header
+// row matches initHeaders() exactly. If the sheet was created — or had
+// columns added — at a different point in this project's history, the
+// real layout can silently differ from what the code assumes, and writes
+// land in the wrong cell with no error. Looking the column up by its
+// actual header text every time removes that failure mode entirely: it
+// works no matter what order the columns are really in.
+function getColIndex_(sheet, headerName) {
+  var lastCol = sheet.getLastColumn();
+  if (lastCol < 1) return -1;
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  for (var i = 0; i < headers.length; i++) {
+    if (String(headers[i]).trim() === headerName) return i + 1; // 1-based column index
+  }
+  return -1;
+}
+
+// Writes a value while forcing the cell to plain-text format first.
+// Needed for phone/WhatsApp numbers: Sheets auto-parses a value starting
+// with "+" (e.g. "+91 9876543210") as the start of an arithmetic
+// expression, and shows "#ERROR!" when it doesn't resolve — this is a
+// Sheets auto-detection behaviour, not something the +91 prefix itself
+// does wrong, but setting the column format to "@" (text) beforehand
+// stops Sheets from trying to parse it at all.
+function writeAsText_(sheet, row, col, value) {
+  if (col < 1) return;
+  var range = sheet.getRange(row, col);
+  range.setNumberFormat('@');
+  range.setValue(String(value || ''));
+}
+
+// ============================================================
+// USER AUTH
+// ============================================================
+
+function registerUser(body) {
+  var firstName = body.firstName, lastName = body.lastName;
+  var email = body.email, phone = body.phone;
+  var city  = body.city  || "", password = body.password;
+
+  if (!firstName || !lastName || !email || !phone || !password)
+    return { ok: false, msg: "All required fields must be filled." };
+  if (password.length < 6)
+    return { ok: false, msg: "Password must be at least 6 characters." };
+
+  var sheet = getSheet(USER_SHEET_ID, TABS.users);
+  var users = sheetToObjects(sheet);
+
+  for (var i = 0; i < users.length; i++) {
+    if (users[i].Email && users[i].Email.toLowerCase() === email.toLowerCase())
+      return { ok: false, msg: "An account with this email already exists." };
+  }
+
+  var id   = generateID("USR");
+  var hash = hashPassword(password);
+  var now  = new Date().toISOString();
+  var role = (email.toLowerCase() === ADMIN_EMAIL.toLowerCase()) ? "admin" : "user";
+
+  sheet.appendRow([id, firstName, lastName, email, "", city, hash, role, now, now]);
+  writeAsText_(sheet, sheet.getLastRow(), getColIndex_(sheet, "Phone"), phone);
+  clearCache_(['stats']);
+
+  notifyAdmin(
+    "New User Registered: " + firstName + " " + lastName,
+    "Name: " + firstName + " " + lastName + "\nEmail: " + email + "\nPhone: " + phone + "\nCity: " + city + "\nRegistered: " + now
+  );
+
+  return {
+    ok: true,
+    msg: "Account created successfully!",
+    user: { id: id, firstName: firstName, lastName: lastName, email: email, phone: phone, city: city, role: role }
+  };
+}
+
+function loginUser(body) {
+  var email = body.email, password = body.password;
+  if (!email || !password) return { ok: false, msg: "Email and password required." };
+
+  // Admin shortcut
+  if (email.toLowerCase() === ADMIN_EMAIL.toLowerCase() && password === ADMIN_PASSWORD) {
+    return {
+      ok: true,
+      user: { id: "ADMIN_001", firstName: "ACCI", lastName: "Admin", email: ADMIN_EMAIL, role: "admin" }
+    };
+  }
+
+  var sheet = getSheet(USER_SHEET_ID, TABS.users);
+  var users = sheetToObjects(sheet);
+  var hash  = hashPassword(password);
+
+  for (var i = 0; i < users.length; i++) {
+    var u = users[i];
+    if (u.Email && u.Email.toLowerCase() === email.toLowerCase() && u.PasswordHash === hash) {
+      try { sheet.getRange(u._row, 10).setValue(new Date().toISOString()); } catch(e) {}
+      return {
+        ok: true,
+        user: { id: u.ID, firstName: u.FirstName, lastName: u.LastName, email: u.Email, phone: u.Phone, city: u.City, role: u.Role || "user" }
+      };
+    }
+  }
+  return { ok: false, msg: "Invalid email or password." };
+}
+
+// ============================================================
+// VENDORS
+// ============================================================
+
+function submitVendor(body) {
+  if (!body.businessName || !body.ownerName || !body.category || !body.description || !body.phone || !body.address || !body.city)
+    return { ok: false, msg: "Please fill all required fields." };
+
+  var sheet = getSheet(VENDOR_SHEET_ID, TABS.vendors);
+  var id    = generateID("VND");
+  var now   = new Date().toISOString();
+
+  // Built by header name and written in whatever order the sheet's real
+  // header row is in — NOT a fixed positional array. The previous version
+  // assumed a "SubmittedAt" column that doesn't actually exist in the live
+  // sheet, which silently pushed every field after Status one column to
+  // the right on every single vendor submission. Any header this map
+  // doesn't mention (e.g. if a "SubmittedAt" column does exist on some
+  // future copy of this sheet) is just left blank — harmless either way.
+  var values = {
+    ID: id,
+    UserID: body.userId || "",
+    BusinessName: body.businessName || "",
+    LegalName: body.legalName || "",
+    OwnerName: body.ownerName || "",
+    IncomeType: body.incomeType || "",
+    Category: body.category || "",
+    Industry: body.industry || "",
+    Description: body.description || "",
+    DetailedProfile: body.detailed || "",
+    Tagline: body.tagline || "",
+    // Phone/WhatsApp intentionally left blank here — written afterwards
+    // via writeAsText_ so Sheets doesn't misread a leading "+91" as a formula.
+    Email: body.email || "",
+    Website: body.website || "",
+    Social: body.social || "",
+    Address: body.address || "",
+    City: body.city || "",
+    PINCode: body.pinCode || "",
+    MapsLink: body.maps || "",
+    Timing: body.timing || "",
+    GST: body.gst || "",
+    EstYear: body.estYear || "",
+    Employees: body.employees || "",
+    ServiceCategories: body.services || "",
+    ProductCategories: body.products || "",
+    Awards: body.awards || "",
+    Plan: body.plan || "Free",
+    Status: "Pending",
+    SubmittedAt: now,   // only written if this column actually exists on the sheet
+    ApprovedAt: "",
+    Featured: "No",
+    Rating: "0",
+    ReviewCount: "0",
+    WorkPhotos: body.workPhotos || "",
+    LogoUrl: body.logoUrl || ""
+  };
+
+  var lastCol = Math.max(sheet.getLastColumn(), 1);
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var row = headers.map(function(h) {
+    var key = String(h).trim();
+    return values.hasOwnProperty(key) ? values[key] : "";
+  });
+  sheet.appendRow(row);
+
+  // Force Phone/WhatsApp to plain-text format and re-write them — a value
+  // starting with "+" (like "+91 9876543210") gets auto-parsed by Sheets
+  // as an expression otherwise, showing "#ERROR!" instead of the number.
+  var newVendorRow = sheet.getLastRow();
+  writeAsText_(sheet, newVendorRow, getColIndex_(sheet, "Phone"), body.phone);
+  writeAsText_(sheet, newVendorRow, getColIndex_(sheet, "WhatsApp"), body.whatsapp);
+
+  notifyAdmin(
+    "New Vendor Listing: " + (body.businessName || ""),
+    "Business: " + (body.businessName||"") + "\nOwner: " + (body.ownerName||"") + "\nCategory: " + (body.category||"") + "\nIndustry: " + (body.industry||"") + "\nPhone: " + (body.phone||"") + "\nCity: " + (body.city||"") + "\nSubmitted: " + now + "\n\nReview it in the Admin Panel."
+  );
+
+  return { ok: true, msg: "Your listing request has been submitted! It will be reviewed within 24–48 hours.", id: id };
+}
+
+function getVendors(params) {
+  // The full sheet scan below is the expensive part — cache the raw
+  // "approved vendors" rows for 90s so every visitor hitting the homepage
+  // in that window reuses one scan instead of triggering their own.
+  var vendors = getCache_('approved_vendors_raw');
+  if (!vendors) {
+    var sheet = getSheet(VENDOR_SHEET_ID, TABS.vendors);
+    var all = sheetToObjects(sheet);
+    vendors = [];
+    for (var k = 0; k < all.length; k++) {
+      if (String(all[k].Status || "").trim().toLowerCase() === "approved") vendors.push(all[k]);
+    }
+    setCache_('approved_vendors_raw', vendors, 90);
+  }
+  var filtered = [];
+
+  for (var i = 0; i < vendors.length; i++) {
+    var v = vendors[i];
+    if (params.category && params.category !== "" && v.Category !== params.category) continue;
+    if (params.featuredOnly === "true" && v.Featured !== "Yes") continue;
+    if (params.industry && params.industry !== "" && (v.Industry||"") !== params.industry) continue;
+    if (params.search && params.search !== "") {
+      var q = params.search.toLowerCase();
+      var match = (v.BusinessName||"").toLowerCase().indexOf(q) > -1 ||
+                  (v.Description||"").toLowerCase().indexOf(q)  > -1 ||
+                  (v.Category||"").toLowerCase().indexOf(q)     > -1 ||
+                  (v.City||"").toLowerCase().indexOf(q)         > -1 ||
+                  (v.OwnerName||"").toLowerCase().indexOf(q)    > -1;
+      if (!match) continue;
+    }
+    filtered.push(v);
+  }
+
+  // Featured first
+  filtered.sort(function(a, b) {
+    if (a.Featured === "Yes" && b.Featured !== "Yes") return -1;
+    if (b.Featured === "Yes" && a.Featured !== "Yes") return 1;
+    return 0;
+  });
+
+  var limit  = parseInt(params.limit)  || 12;
+  var offset = parseInt(params.offset) || 0;
+  var page   = filtered.slice(offset, offset + limit);
+
+  var result = [];
+  for (var j = 0; j < page.length; j++) {
+    var v = page[j];
+    result.push({
+      id:               v.ID,
+      businessName:     v.BusinessName     || "",
+      legalName:        v.LegalName        || "",
+      ownerName:        v.OwnerName        || "",
+      incomeType:       v.IncomeType       || "",
+      category:         v.Category         || "",
+      industry:         v.Industry         || "",
+      description:      v.Description      || "",
+      detailed:         v.DetailedProfile  || "",
+      tagline:          v.Tagline          || "",
+      phone:            v.Phone            || "",
+      whatsapp:         v.WhatsApp         || "",
+      email:            v.Email            || "",
+      website:          v.Website          || "",
+      social:           v.Social           || "",
+      address:          v.Address          || "",
+      city:             v.City             || "",
+      pinCode:          v.PINCode          || "",
+      maps:             v.MapsLink         || "",
+      timing:           v.Timing           || "",
+      gst:              v.GST              || "",
+      estYear:          v.EstYear          || "",
+      employees:        v.Employees        || "",
+      services:         v.ServiceCategories|| "",
+      products:         v.ProductCategories|| "",
+      awards:           v.Awards           || "",
+      plan:             v.Plan             || "Free",
+      featured:         v.Featured         || "No",
+      rating:           v.Rating           || "0",
+      reviewCount:      v.ReviewCount      || "0",
+      workPhotos:       String(v.WorkPhotos || ""),
+      logoUrl:          v.LogoUrl          || ""
+    });
+  }
+
+  return { ok: true, total: filtered.length, vendors: result };
+}
+
+function getAllVendors(params) {
+  if (!verifyAdmin(params.adminToken)) return { ok: false, msg: "Unauthorized" };
+  var sheet   = getSheet(VENDOR_SHEET_ID, TABS.vendors);
+  var vendors = sheetToObjects(sheet);
+  var result  = [];
+  for (var i = 0; i < vendors.length; i++) {
+    var v = vendors[i];
+    result.push({
+      id: v.ID, row: v._row, businessName: v.BusinessName, ownerName: v.OwnerName,
+      category: v.Category, phone: v.Phone, email: v.Email, city: v.City,
+      plan: v.Plan, status: v.Status, submittedAt: v.SubmittedAt,
+      featured: v.Featured, userId: v.UserID
+    });
+  }
+  return { ok: true, vendors: result };
+}
+
+function updateVendorStatus(body) {
+  if (!verifyAdmin(body.adminToken)) return { ok: false, msg: "Unauthorized" };
+  var sheet   = getSheet(VENDOR_SHEET_ID, TABS.vendors);
+  var vendors = sheetToObjects(sheet);
+  var vendor  = null;
+  for (var i = 0; i < vendors.length; i++) {
+    if (vendors[i].ID === body.vendorId) { vendor = vendors[i]; break; }
+  }
+  if (!vendor) return { ok: false, msg: "Vendor not found" };
+
+  var statusCol     = getColIndex_(sheet, "Status");
+  var approvedAtCol = getColIndex_(sheet, "ApprovedAt");
+  var featuredCol   = getColIndex_(sheet, "Featured");
+
+  if (statusCol < 1) return { ok: false, msg: "Could not find a 'Status' column in the Vendors sheet." };
+  sheet.getRange(vendor._row, statusCol).setValue(body.status);
+  if (body.status === "Approved" && approvedAtCol > 0) sheet.getRange(vendor._row, approvedAtCol).setValue(new Date().toISOString());
+  if (body.featured !== undefined) {
+    if (featuredCol < 1) return { ok: false, msg: "Could not find a 'Featured' column in the Vendors sheet — add one to the header row." };
+    sheet.getRange(vendor._row, featuredCol).setValue(body.featured ? "Yes" : "No");
+  }
+
+  clearCache_(['approved_vendors_raw', 'stats']);
+  return { ok: true, msg: "Vendor updated." };
+}
+
+// ============================================================
+// HOME INIT (combined) — bundles the 4 calls the homepage fires on
+// every load (stats, categories, industries, featured vendors) into one
+// HTTP round trip. Each piece still uses its own cache internally, so
+// this only removes network/dispatch overhead, not the caching benefit.
+// Defined here, ahead of getStats/getVendors, since it calls both.
+// ============================================================
+// ============================================================
+// ONE-TIME REPAIR — run this once manually from the Apps Script editor
+// (select "fixBrokenPhoneColumns" in the function dropdown, then Run) if
+// any existing Phone/WhatsApp/ContactWhatsApp cells already show
+// "#ERROR!" from before this fix. It sets every cell in those columns to
+// plain-text format going forward. It CANNOT recover a value that's
+// already showing #ERROR! — Sheets has already discarded the original
+// text at that point — so any row already broken (e.g. a test listing
+// like "Blah Blah foods") needs that one cell retyped by hand, once,
+// after running this.
+// ============================================================
+function fixBrokenPhoneColumns() {
+  var vSheet = getSheet(VENDOR_SHEET_ID, TABS.vendors);
+  var uSheet = getSheet(USER_SHEET_ID, TABS.users);
+  var jSheet = getSheet(VENDOR_SHEET_ID, TABS.jobs);
+  var targets = [
+    [vSheet, "Phone"], [vSheet, "WhatsApp"],
+    [uSheet, "Phone"],
+    [jSheet, "ContactWhatsApp"]
+  ];
+  var stillBroken = [];
+  targets.forEach(function(t) {
+    var sheet = t[0], header = t[1];
+    var col = getColIndex_(sheet, header);
+    if (col < 1) return;
+    var lastRow = sheet.getLastRow();
+    if (lastRow < 2) return;
+    var range = sheet.getRange(2, col, lastRow - 1, 1);
+    range.setNumberFormat('@'); // plain text from now on
+    var values = range.getValues();
+    for (var i = 0; i < values.length; i++) {
+      if (String(values[i][0]).indexOf('#ERROR') > -1) {
+        stillBroken.push(sheet.getName() + " row " + (i + 2) + ", column " + header);
+      }
+    }
+  });
+  if (stillBroken.length) {
+    Logger.log("Formatting fixed. These existing cells still show #ERROR! and need to be retyped by hand:\n" + stillBroken.join("\n"));
+  } else {
+    Logger.log("Formatting fixed. No existing #ERROR! cells found in Phone/WhatsApp/ContactWhatsApp.");
+  }
+}
+
+function getHomeInit(params) {
+  var stats      = getStats();
+  var categories = getCategories();
+  var industries = getIndustries();
+  var vendorsResult = getVendors({
+    search: "", category: "", industry: "",
+    featuredOnly: "true",
+    limit: params.limit || 12, offset: 0
+  });
+  return { ok: true, stats: stats, categories: categories, industries: industries, vendorsResult: vendorsResult };
+}
+
+function getStats() {
+  var cached = getCache_('stats');
+  if (cached) return cached;
+  var vSheet  = getSheet(VENDOR_SHEET_ID, TABS.vendors);
+  var uSheet  = getSheet(USER_SHEET_ID,   TABS.users);
+  var vendors = sheetToObjects(vSheet);
+  var users   = sheetToObjects(uSheet);
+  var approved = 0;
+  var cats = {};
+  var inds = {};
+  for (var i = 0; i < vendors.length; i++) {
+    if (String(vendors[i].Status||"").trim().toLowerCase() === "approved") {
+      approved++;
+      var cat = vendors[i].Category;
+      cats[cat] = (cats[cat] || 0) + 1;
+      var ind = vendors[i].Industry;
+      if (ind) inds[ind] = (inds[ind] || 0) + 1;
+    }
+  }
+  var result = { ok: true, vendors: approved, users: users.length, cats: cats, industries: inds };
+  setCache_('stats', result, 120);
+  return result;
+}
+
+// ============================================================
+// JOBS
+// ============================================================
+
+function postJob(body) {
+  if (!body.title || !body.company || !body.description)
+    return { ok: false, msg: "Title, company and description are required." };
+  if (!body.contactEmail && !body.contactWhatsapp)
+    return { ok: false, msg: "Please provide at least an email or WhatsApp number to apply." };
+
+  var sheet = getSheet(VENDOR_SHEET_ID, TABS.jobs);
+  var id    = generateID("JOB");
+  var now   = new Date().toISOString();
+
+  sheet.appendRow([
+    id, body.userId || "", body.company, body.title,
+    body.category || "Other", body.jobType || "Full-Time",
+    body.urgency  || "Open", body.salary || "",
+    body.location || "Jabalpur", body.description,
+    body.skills || "", body.contactEmail || "", "Active", now,
+    body.contactEmail || "", ""
+  ]);
+  writeAsText_(sheet, sheet.getLastRow(), getColIndex_(sheet, "ContactWhatsApp"), body.contactWhatsapp);
+
+  notifyAdmin(
+    "New Job Posted: " + body.title,
+    "Title: " + body.title + "\nCompany: " + body.company + "\nCategory: " + (body.category||"Other") + "\nLocation: " + (body.location||"Jabalpur") + "\nContact: " + (body.contactEmail || body.contactWhatsapp || "") + "\nPosted: " + now
+  );
+
+  return { ok: true, msg: "Job vacancy posted successfully!", id: id };
+}
+
+function getJobs(params) {
+  var sheet  = getSheet(VENDOR_SHEET_ID, TABS.jobs);
+  var jobs   = sheetToObjects(sheet);
+  var filtered = [];
+
+  for (var i = 0; i < jobs.length; i++) {
+    var j = jobs[i];
+    if (params.userId) {
+      if (j.UserID === params.userId) filtered.push(j);
+    } else {
+      if (j.Status === "Active") filtered.push(j);
+    }
+  }
+
+  // Urgent first
+  filtered.sort(function(a, b) {
+    if (a.Urgency === "Urgent" && b.Urgency !== "Urgent") return -1;
+    if (b.Urgency === "Urgent" && a.Urgency !== "Urgent") return 1;
+    return 0;
+  });
+
+  var limit  = parseInt(params.limit)  || 9;
+  var offset = parseInt(params.offset) || 0;
+  var page   = filtered.slice(offset, offset + limit);
+  var result = [];
+
+  for (var k = 0; k < page.length; k++) {
+    var j = page[k];
+    // Fallback for jobs posted before the email/WhatsApp split: if the new
+    // columns are empty but the old single "Contact" field has a value,
+    // parse it so old listings still show a working Apply button.
+    var ce = j.ContactEmail || "";
+    var cw = j.ContactWhatsApp || "";
+    if (!ce && !cw && j.Contact) {
+      var legacy = String(j.Contact).trim();
+      if (legacy.indexOf("@") > -1) ce = legacy;
+      else if (legacy.replace(/\D/g,"").length >= 10) cw = legacy;
+    }
+    result.push({
+      id: j.ID, company: j.Company, title: j.Title, category: j.Category,
+      jobType: j.JobType, urgency: j.Urgency, salary: j.Salary,
+      location: j.Location, description: j.Description,
+      skills: j.Skills, contact: j.Contact, postedAt: j.PostedAt,
+      contactEmail: ce, contactWhatsapp: cw
+    });
+  }
+
+  return { ok: true, total: filtered.length, jobs: result };
+}
+
+function getAllJobsAdmin(params) {
+  if (!verifyAdmin(params.adminToken)) return { ok: false, msg: "Unauthorized" };
+  var sheet  = getSheet(VENDOR_SHEET_ID, TABS.jobs);
+  var jobs   = sheetToObjects(sheet);
+  var result = [];
+  for (var i = 0; i < jobs.length; i++) {
+    var j = jobs[i];
+    result.push({
+      id: j.ID, row: j._row, company: j.Company, title: j.Title,
+      urgency: j.Urgency, location: j.Location, status: j.Status, postedAt: j.PostedAt
+    });
+  }
+  return { ok: true, jobs: result };
+}
+
+// ============================================================
+// EVENTS
+// ============================================================
+
+function addEvent(body) {
+  if (!verifyAdmin(body.adminToken)) return { ok: false, msg: "Unauthorized" };
+  if (!body.title || !body.date) return { ok: false, msg: "Title and date required." };
+
+  var sheet = getSheet(VENDOR_SHEET_ID, TABS.events);
+  var id    = generateID("EVT");
+  var now   = new Date().toISOString();
+
+  sheet.appendRow([
+    id, body.title, body.category || "Event", body.date,
+    body.time || "", body.venue || "", body.description || "",
+    body.imageURL || "", body.bgColor || "", now
+  ]);
+
+  return { ok: true, msg: "Event added.", id: id };
+}
+
+function formatEventTime(rawTime) {
+  // Sheets sometimes stores a typed time string ("4:00 PM") as an actual
+  // Date/time serial. When Apps Script reads it back it comes through as
+  // a JS Date object anchored to 1899-12-30 (Sheets' time-only epoch).
+  // Detect that and format it as a clean HH:MM AM/PM string instead of
+  // letting it serialize to an ISO timestamp.
+  if (!rawTime) return "";
+  if (Object.prototype.toString.call(rawTime) === "[object Date]") {
+    var h = rawTime.getHours();
+    var m = rawTime.getMinutes();
+    var ampm = h >= 12 ? "PM" : "AM";
+    var h12 = h % 12; if (h12 === 0) h12 = 12;
+    var mStr = (m < 10 ? "0" : "") + m;
+    return h12 + ":" + mStr + " " + ampm;
+  }
+  return String(rawTime);
+}
+
+function getEvents() {
+  var sheet  = getSheet(VENDOR_SHEET_ID, TABS.events);
+  var events = sheetToObjects(sheet);
+
+  events.sort(function(a, b) { return new Date(b.Date) - new Date(a.Date); });
+
+  var result = [];
+  var limit  = Math.min(events.length, 6);
+  for (var i = 0; i < limit; i++) {
+    var ev = events[i];
+    result.push({
+      id: ev.ID, title: ev.Title, category: ev.Category,
+      date: ev.Date, time: formatEventTime(ev.Time), venue: ev.Venue,
+      description: ev.Description, imageURL: ev.ImageURL, bgColor: ev.BgColor
+    });
+  }
+  return { ok: true, events: result };
+}
+
+// ============================================================
+// GALLERY
+// ============================================================
+
+function addGalleryPhoto(body) {
+  if (!verifyAdmin(body.adminToken)) return { ok: false, msg: "Unauthorized" };
+  if (!body.title || !body.imageURL) return { ok: false, msg: "Title and image URL required." };
+
+  var sheet = getSheet(VENDOR_SHEET_ID, TABS.gallery);
+  var id    = generateID("GAL");
+  var now   = new Date().toISOString();
+
+  sheet.appendRow([id, body.title, body.imageURL, body.album || "", body.bgColor || "", now]);
+  return { ok: true, msg: "Photo added.", id: id };
+}
+
+function getGallery() {
+  var sheet   = getSheet(VENDOR_SHEET_ID, TABS.gallery);
+  var gallery = sheetToObjects(sheet);
+
+  gallery.sort(function(a, b) { return new Date(b.CreatedAt) - new Date(a.CreatedAt); });
+
+  var result = [];
+  var limit  = Math.min(gallery.length, 12);
+  for (var i = 0; i < limit; i++) {
+    var p = gallery[i];
+    result.push({
+      id: p.ID, title: p.Title, imageURL: p.ImageURL,
+      album: p.Album, bgColor: p.BgColor
+    });
+  }
+  return { ok: true, photos: result };
+}
+
+// ============================================================
+// USERS (ADMIN)
+// ============================================================
+
+function getUsers(params) {
+  if (!verifyAdmin(params.adminToken)) return { ok: false, msg: "Unauthorized" };
+  var sheet  = getSheet(USER_SHEET_ID, TABS.users);
+  var users  = sheetToObjects(sheet);
+  var result = [];
+  for (var i = 0; i < users.length; i++) {
+    var u = users[i];
+    result.push({
+      id: u.ID, firstName: u.FirstName, lastName: u.LastName,
+      email: u.Email, phone: u.Phone, city: u.City,
+      role: u.Role, createdAt: u.CreatedAt, lastLogin: u.LastLogin
+    });
+  }
+  return { ok: true, users: result };
+}
+
+// ============================================================
+// DELETE ROW (ADMIN)
+// ============================================================
+
+function deleteRow(body) {
+  if (!verifyAdmin(body.adminToken)) return { ok: false, msg: "Unauthorized" };
+
+  var sheet;
+  if      (body.sheetType === "events")  sheet = getSheet(VENDOR_SHEET_ID, TABS.events);
+  else if (body.sheetType === "gallery") sheet = getSheet(VENDOR_SHEET_ID, TABS.gallery);
+  else if (body.sheetType === "jobs")    sheet = getSheet(VENDOR_SHEET_ID, TABS.jobs);
+  else return { ok: false, msg: "Unknown sheet type" };
+
+  var rows = sheetToObjects(sheet);
+  var row  = null;
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].ID === body.rowId) { row = rows[i]; break; }
+  }
+  if (!row) return { ok: false, msg: "Row not found" };
+  sheet.deleteRow(row._row);
+  return { ok: true, msg: "Deleted." };
+}
+
+// ============================================================
+// NEW FUNCTIONS — Add these to your existing Code.gs
+// ============================================================
+
+// ── GET VENDORS BY USER ID ───────────────────────────────────
+function getVendorsByUser(params) {
+  var sheet   = getSheet(VENDOR_SHEET_ID, TABS.vendors);
+  var vendors = sheetToObjects(sheet);
+  var result  = [];
+  for (var i = 0; i < vendors.length; i++) {
+    var v = vendors[i];
+    if (v.UserID === params.userId) {
+      result.push({
+        id:           v.ID,
+        userId:       v.UserID,
+        businessName: v.BusinessName     || "",
+        legalName:    v.LegalName        || "",
+        ownerName:    v.OwnerName        || "",
+        incomeType:   v.IncomeType       || "",
+        category:     v.Category         || "",
+        industry:     v.Industry         || "",
+        description:  v.Description      || "",
+        detailed:     v.DetailedProfile  || "",
+        tagline:      v.Tagline          || "",
+        phone:        v.Phone            || "",
+        whatsapp:     v.WhatsApp         || "",
+        email:        v.Email            || "",
+        website:      v.Website          || "",
+        social:       v.Social           || "",
+        address:      v.Address          || "",
+        city:         v.City             || "",
+        pinCode:      v.PINCode          || "",
+        maps:         v.MapsLink         || "",
+        timing:       v.Timing           || "",
+        gst:          v.GST              || "",
+        estYear:      v.EstYear          || "",
+        employees:    v.Employees        || "",
+        services:     v.ServiceCategories|| "",
+        products:     v.ProductCategories|| "",
+        awards:       v.Awards           || "",
+        plan:         v.Plan             || "Free",
+        status:       v.Status,
+        featured:     v.Featured,
+        rating:       v.Rating,
+        reviewCount:  v.ReviewCount,
+        workPhotos:   String(v.WorkPhotos || ""),
+        logoUrl:      v.LogoUrl          || ""
+      });
+    }
+  }
+  return { ok: true, vendors: result };
+}
+
+// ── UPDATE VENDOR (EDIT) ─────────────────────────────────────
+function updateVendor(body) {
+  if (!body.vendorId) return { ok: false, msg: "Vendor ID required." };
+  var sheet   = getSheet(VENDOR_SHEET_ID, TABS.vendors);
+  var vendors = sheetToObjects(sheet);
+  var vendor  = null;
+  for (var i = 0; i < vendors.length; i++) {
+    if (vendors[i].ID === body.vendorId && vendors[i].UserID === body.userId) {
+      vendor = vendors[i]; break;
+    }
+  }
+  if (!vendor) return { ok: false, msg: "Listing not found or not yours." };
+
+  // Written by header name, not hardcoded column number — see getColIndex_.
+  // Maps request-field -> [SheetHeaderName, existingValueFallback].
+  var row = vendor._row;
+  var fieldMap = {
+    BusinessName:      body.businessName || vendor.BusinessName,
+    LegalName:         body.legalName    || vendor.LegalName        || "",
+    OwnerName:         body.ownerName    || vendor.OwnerName,
+    IncomeType:        body.incomeType   || vendor.IncomeType       || "",
+    Category:          body.category     || vendor.Category,
+    Industry:          body.industry     || vendor.Industry         || "",
+    Description:       body.description  || vendor.Description,
+    DetailedProfile:   body.detailed     || vendor.DetailedProfile  || "",
+    Tagline:           body.tagline      || vendor.Tagline          || "",
+    Email:             body.email        || vendor.Email            || "",
+    Website:           body.website      || vendor.Website          || "",
+    Social:            body.social       || vendor.Social           || "",
+    Address:           body.address      || vendor.Address,
+    City:              body.city         || vendor.City,
+    PINCode:           body.pinCode      || vendor.PINCode          || "",
+    MapsLink:          body.maps         || vendor.MapsLink         || "",
+    Timing:            body.timing       || vendor.Timing           || "",
+    GST:               body.gst          || vendor.GST              || "",
+    EstYear:           body.estYear      || vendor.EstYear          || "",
+    Employees:         body.employees    || vendor.Employees        || "",
+    ServiceCategories: body.services     || vendor.ServiceCategories|| "",
+    ProductCategories: body.products     || vendor.ProductCategories|| "",
+    Awards:            body.awards       || vendor.Awards           || "",
+    Plan:              body.plan         || vendor.Plan,
+    WorkPhotos:        body.workPhotos   || vendor.WorkPhotos       || "",
+    LogoUrl:           body.logoUrl      || vendor.LogoUrl          || ""
+  };
+  Object.keys(fieldMap).forEach(function(header) {
+    var col = getColIndex_(sheet, header);
+    if (col > 0) sheet.getRange(row, col).setValue(fieldMap[header]);
+  });
+  // Phone/WhatsApp written separately as forced plain text — a leading
+  // "+" (as in "+91...") otherwise gets auto-parsed by Sheets and shows
+  // "#ERROR!" instead of the number.
+  writeAsText_(sheet, row, getColIndex_(sheet, "Phone"),    body.phone    || vendor.Phone);
+  writeAsText_(sheet, row, getColIndex_(sheet, "WhatsApp"), body.whatsapp || vendor.WhatsApp || "");
+
+  clearCache_(['approved_vendors_raw']);
+  return { ok: true, msg: "Your listing has been updated! Changes will reflect shortly." };
+}
+
+// ── REVIEWS ───────────────────────────────────────────────────
+function addReview(body) {
+  if (!body.vendorId || !body.name || !body.text || !body.rating)
+    return { ok: false, msg: "All fields required." };
+
+  var sheet = getSheet(VENDOR_SHEET_ID, "Reviews");
+  // Init headers if new sheet — 8 columns including Status
+  if (sheet.getLastRow() < 1 || sheet.getRange(1,1).getValue() === "") {
+    sheet.getRange(1,1,1,8).setValues([["ID","VendorID","BizName","Name","Rating","Text","Date","Status"]]);
+    sheet.getRange(1,1,1,8).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+  }
+
+  var id  = generateID("REV");
+  // Written by header name rather than a fixed-position array — if this
+  // "Reviews" tab ever pre-existed with a different column order (the
+  // same failure mode that hit the Vendors sheet), this still lands
+  // correctly instead of silently misaligning.
+  var values = {
+    ID: id, VendorID: body.vendorId, BizName: body.bizName || "",
+    Name: body.name, Rating: body.rating, Text: body.text,
+    Date: body.date || new Date().toISOString(), Status: "Pending"
+  };
+  var lastCol = Math.max(sheet.getLastColumn(), 1);
+  var headers = sheet.getRange(1, 1, 1, lastCol).getValues()[0];
+  var row = headers.map(function(h) {
+    var key = String(h).trim();
+    return values.hasOwnProperty(key) ? values[key] : "";
+  });
+  sheet.appendRow(row);
+
+  notifyAdmin(
+    "New Vendor Review Submitted",
+    "Business: " + (body.bizName||"") + " (Vendor ID: " + body.vendorId + ")\nBy: " + body.name + "\nRating: " + body.rating + "/5\nReview: " + body.text + "\n\nApprove it in the Admin Panel → Vendor Reviews."
+  );
+
+  return { ok: true, msg: "Review submitted! It will appear after admin approval." };
+}
+
+function getReviews(params) {
+  var sheet   = getSheet(VENDOR_SHEET_ID, "Reviews");
+  var reviews = sheetToObjects(sheet);
+  var result  = [];
+  var searchId = String(params.vendorId || "").trim();
+  for (var i = 0; i < reviews.length; i++) {
+    var r = reviews[i];
+    if (String(r.VendorID || "").trim() !== searchId) continue;
+    if (String(r.Status || "").trim() !== "Approved") continue; // public profile only shows approved reviews
+    result.push({
+      id: r.ID, name: r.Name,
+      rating: r.Rating, text: r.Text, date: r.Date
+    });
+  }
+  // Latest first
+  result.sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
+  return { ok: true, reviews: result };
+}
+
+function updateVendorRating(vendorId) {
+  try {
+    var rSheet  = getSheet(VENDOR_SHEET_ID, "Reviews");
+    var reviews = sheetToObjects(rSheet);
+    var sum = 0, count = 0;
+    for (var i = 0; i < reviews.length; i++) {
+      if (reviews[i].VendorID === vendorId) { sum += parseFloat(reviews[i].Rating)||0; count++; }
+    }
+    if (!count) return;
+    var avg = (sum/count).toFixed(1);
+
+    var vSheet  = getSheet(VENDOR_SHEET_ID, TABS.vendors);
+    var vendors = sheetToObjects(vSheet);
+    var ratingCol = getColIndex_(vSheet, "Rating");
+    var countCol  = getColIndex_(vSheet, "ReviewCount");
+    for (var j = 0; j < vendors.length; j++) {
+      if (vendors[j].ID === vendorId) {
+        if (ratingCol > 0) vSheet.getRange(vendors[j]._row, ratingCol).setValue(avg);
+        if (countCol  > 0) vSheet.getRange(vendors[j]._row, countCol).setValue(count);
+        clearCache_(['approved_vendors_raw']);
+        break;
+      }
+    }
+  } catch(e) { Logger.log("Rating update error: " + e); }
+}
+
+// ── PLATFORM FEEDBACK ─────────────────────────────────────────
+function addPlatformFeedback(body) {
+  if (!body.name || !body.rating || !body.text)
+    return { ok: false, msg: "All fields required." };
+
+  var sheet = getSheet(USER_SHEET_ID, "PlatformFeedback");
+  if (sheet.getLastRow() < 1 || sheet.getRange(1,1).getValue() === "") {
+    sheet.getRange(1,1,1,5).setValues([["ID","Name","Rating","Text","Date"]]);
+    sheet.getRange(1,1,1,5).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+  }
+  var id = generateID("PFB");
+  sheet.appendRow([id, body.name, body.rating, body.text, body.date || new Date().toISOString()]);
+
+  notifyAdmin(
+    "New Platform Feedback",
+    "Name: " + body.name + "\nRating: " + body.rating + "/5\nFeedback: " + body.text
+  );
+
+  return { ok: true, msg: "Feedback saved. Thank you!" };
+}
+
+// ── ADD WorkPhotos column to vendor getVendors response ───────
+// (Also update getVendors to include workPhotos)
+// In your existing getVendors result.push, add: workPhotos: v.WorkPhotos || ""
+// And in the Vendors sheet, add column 26: WorkPhotos
+
+
+// ============================================================
+// PHOTO UPLOAD — Receives base64, saves to Google Drive,
+// returns a public URL. Add this to your Code.gs
+// ============================================================
+
+// ── DRIVE FOLDER ID ──────────────────────────────────────────
+// 1. Go to Google Drive
+// 2. Create a folder called "ACCI Business Photos"
+// 3. Right-click → Share → "Anyone with the link" → Viewer
+// 4. Copy the folder ID from the URL and paste below
+var PHOTOS_FOLDER_ID = "YOUR_GOOGLE_DRIVE_FOLDER_ID_HERE"; // ← CHANGE THIS
+
+function uploadPhoto(body) {
+  try {
+    if (!body.base64 || !body.fileName || !body.mimeType)
+      return { ok: false, msg: "Missing file data." };
+
+    // Decode base64 to binary blob
+    var decoded  = Utilities.base64Decode(body.base64);
+    var blob     = Utilities.newBlob(decoded, body.mimeType, body.fileName);
+
+    // Get or create the photos folder
+    var folder;
+    try {
+      folder = DriveApp.getFolderById(PHOTOS_FOLDER_ID);
+    } catch(e) {
+      // Folder ID not set — create one automatically
+      folder = DriveApp.createFolder("ACCI Business Photos");
+      folder.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+      // Log the new folder ID so you can set PHOTOS_FOLDER_ID
+      Logger.log("Created new folder. ID: " + folder.getId() + " — paste this into PHOTOS_FOLDER_ID");
+    }
+
+    // Create file in Drive
+    var fileName  = (body.userId || "guest") + "_" + new Date().getTime() + "_" + body.fileName;
+    var file      = folder.createFile(blob.setName(fileName));
+
+    // Make public
+    file.setSharing(DriveApp.Access.ANYONE_WITH_LINK, DriveApp.Permission.VIEW);
+
+    // Return direct image URL (thumbnail format — works in <img> tags)
+    var fileId    = file.getId();
+    var publicUrl = "https://drive.google.com/thumbnail?id=" + fileId + "&sz=w400";
+    // Also set a view URL for full size
+    var viewUrl   = "https://drive.google.com/uc?export=view&id=" + fileId;
+
+    return {
+      ok:      true,
+      url:     publicUrl,   // used in img tags — thumbnail loads fast
+      viewUrl: viewUrl,     // full size
+      fileId:  fileId,
+      msg:     "Photo uploaded successfully."
+    };
+
+  } catch(err) {
+    return { ok: false, msg: "Upload error: " + err.toString() };
+  }
+}
+
+// Add uploadPhoto to doPost router:
+// case "uploadPhoto": result = uploadPhoto(body); break;
+
+// ── NEW VENDOR FIELDS SUPPORT ────────────────────────────────
+// Add these columns to your Vendors sheet (after existing columns):
+// Col 26: WorkPhotos
+// Col 27: LegalName
+// Col 28: Tagline
+// Col 29: LogoUrl
+// Col 30: Industry
+// Col 31: Detailed
+// Col 32: Services
+// Col 33: Products
+// Col 34: Awards
+// Col 35: Social
+// Col 36: Maps
+
+// UPDATE submitVendor to save new fields — replace appendRow in submitVendor:
+/*
+  sheet.appendRow([
+    id, body.userId || "", body.businessName, body.ownerName,
+    body.incomeType || "", body.category, body.description,
+    body.phone, body.whatsapp || "", body.email || "", body.website || "",
+    body.address, body.city, body.pinCode || "", body.timing || "",
+    body.gst || "", body.estYear || "", body.employees || "",
+    body.plan || "Free", "Pending", now, "", "No", "0", "0",
+    body.workPhotos || "", body.legalName || "", body.tagline || "",
+    body.logoUrl || "", body.industry || "", body.detailed || "",
+    body.services || "", body.products || "", body.awards || "",
+    body.social || "", body.maps || ""
+  ]);
+*/
+
+// UPDATE getVendors result.push to include new fields — add to each vendor object:
+/*
+  industry: v.Industry || "",
+  tagline: v.Tagline || "",
+  logoUrl: v.LogoUrl || "",
+  detailed: v.Detailed || "",
+  services: v.Services || "",
+  products: v.Products || "",
+  awards: v.Awards || "",
+  social: v.Social || "",
+  maps: v.Maps || "",
+  legalName: v.LegalName || ""
+*/
+
+// UPDATE getVendors to filter by industry:
+// After existing category filter, add:
+/*
+  if (params.industry && params.industry !== "")
+    filtered = filtered.filter(v => (v.Industry||"") === params.industry);
+*/
+
+// ============================================================
+// CATEGORIES (dynamic — managed from Admin Panel)
+// ============================================================
+
+function getCategories() {
+  var cached = getCache_('categories_list');
+  if (cached) return cached;
+  var sheet = getSheet(VENDOR_SHEET_ID, "Categories");
+  if (sheet.getLastRow() < 1 || sheet.getRange(1,1).getValue() === "") {
+    var now = new Date().toISOString();
+    var defaults = [
+      ["ID","Name","Icon","CreatedAt"],
+      ["CAT_1","Food Processing","🍽️",now],
+      ["CAT_2","Textile & Garments","🧵",now],
+      ["CAT_3","Jewellery","💎",now],
+      ["CAT_4","Agricultural Commodities","🌾",now],
+      ["CAT_5","Hospitals","🏥",now],
+      ["CAT_6","Hotels & Resorts","🏨",now],
+      ["CAT_7","Transporters","🚛",now],
+      ["CAT_8","Chartered Accountants","📊",now],
+      ["CAT_9","Software Development","💻",now],
+      ["CAT_10","Advocates & Law Firms","⚖️",now],
+      ["CAT_11","Real Estate Developers","🏗️",now],
+      ["CAT_12","Clothing & Fashion","👗",now],
+      ["CAT_13","Coaching Institutes","📚",now],
+      ["CAT_14","Event Management","🎭",now],
+      ["CAT_15","Automobile Dealers","🚗",now]
+    ];
+    sheet.getRange(1,1,defaults.length,4).setValues(defaults);
+    sheet.getRange(1,1,1,4).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+  }
+  var rows   = sheetToObjects(sheet);
+  var result = [];
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].Name) {
+      result.push({
+        id:   String(rows[i].ID   || ""),
+        name: String(rows[i].Name || ""),
+        icon: String(rows[i].Icon || "🏪")
+      });
+    }
+  }
+  var out = { ok: true, categories: result };
+  setCache_('categories_list', out, 300);
+  return out;
+}
+
+function addCategory(body) {
+  if (!verifyAdmin(body.adminToken)) return { ok: false, msg: "Unauthorized" };
+  if (!body.name) return { ok: false, msg: "Category name required." };
+
+  var sheet = getSheet(VENDOR_SHEET_ID, "Categories");
+  var rows  = sheetToObjects(sheet);
+
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i].Name).toLowerCase() === String(body.name).toLowerCase())
+      return { ok: false, msg: "Category already exists." };
+  }
+
+  var id  = "CAT_" + new Date().getTime();
+  var now = new Date().toISOString();
+  sheet.appendRow([id, String(body.name).trim(), body.icon || "🏪", now]);
+  clearCache_(['categories_list']);
+  return { ok: true, msg: "Category added.", id: id };
+}
+
+function deleteCategory(body) {
+  if (!verifyAdmin(body.adminToken)) return { ok: false, msg: "Unauthorized" };
+  if (!body.categoryId) return { ok: false, msg: "Category ID required." };
+
+  var sheet = getSheet(VENDOR_SHEET_ID, "Categories");
+  var rows  = sheetToObjects(sheet);
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].ID === body.categoryId) {
+      sheet.deleteRow(rows[i]._row);
+      clearCache_(['categories_list']);
+      return { ok: true, msg: "Category deleted." };
+    }
+  }
+  return { ok: false, msg: "Category not found." };
+}
+
+// ============================================================
+// REVIEWS / PLATFORM FEEDBACK — ADMIN LIST + STATUS UPDATE
+// (Kept for backward compatibility even though the admin
+//  Reviews tab UI has been removed — the review feature for
+//  vendor profiles still uses addReview/getReviews above.)
+// ============================================================
+
+function getAllReviews(params) {
+  if (!verifyAdmin(params.adminToken)) return { ok: false, msg: "Unauthorized" };
+  var sheet = getSheet(VENDOR_SHEET_ID, "Reviews");
+  if (sheet.getLastRow() < 2) return { ok: true, reviews: [] };
+  var rows   = sheetToObjects(sheet);
+  var result = [];
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    result.push({
+      id: String(r.ID||""), row: r._row, vendorId: String(r.VendorID||""),
+      bizName: String(r.BizName||""), name: String(r.Name||""),
+      rating: Number(r.Rating||0), text: String(r.Text||""),
+      date: String(r.Date||""), status: String(r.Status||"Pending")
+    });
+  }
+  result.sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
+  return { ok: true, reviews: result };
+}
+
+function getAllPlatformFeedback(params) {
+  if (!verifyAdmin(params.adminToken)) return { ok: false, msg: "Unauthorized" };
+  var sheet = getSheet(USER_SHEET_ID, "PlatformFeedback");
+  if (sheet.getLastRow() < 2) return { ok: true, feedback: [] };
+  var rows   = sheetToObjects(sheet);
+  var result = [];
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    result.push({
+      id: String(r.ID||""), row: r._row, name: String(r.Name||""),
+      rating: Number(r.Rating||0), text: String(r.Text||""),
+      date: String(r.Date||""), status: String(r.Status||"Pending")
+    });
+  }
+  result.sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
+  return { ok: true, feedback: result };
+}
+
+function updateReviewStatus(body) {
+  if (!verifyAdmin(body.adminToken)) return { ok: false, msg: "Unauthorized" };
+  if (body.reviewType === "platform") {
+    var sheet = getSheet(USER_SHEET_ID, "PlatformFeedback");
+    var rows  = sheetToObjects(sheet);
+    var statusCol = getColIndex_(sheet, "Status");
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].ID === body.reviewId) {
+        if (statusCol < 1) return { ok: false, msg: "Could not find a 'Status' column in PlatformFeedback." };
+        sheet.getRange(rows[i]._row, statusCol).setValue(body.status);
+        return { ok: true, msg: "Feedback " + body.status };
+      }
+    }
+    return { ok: false, msg: "Not found" };
+  } else {
+    var sheet   = getSheet(VENDOR_SHEET_ID, "Reviews");
+    var reviews = sheetToObjects(sheet);
+    var statusCol = getColIndex_(sheet, "Status");
+    for (var i = 0; i < reviews.length; i++) {
+      if (reviews[i].ID === body.reviewId) {
+        if (statusCol < 1) return { ok: false, msg: "Could not find a 'Status' column in Reviews." };
+        sheet.getRange(reviews[i]._row, statusCol).setValue(body.status);
+        if (body.status === "Approved") updateVendorRating(reviews[i].VendorID);
+        return { ok: true, msg: "Review " + body.status };
+      }
+    }
+    return { ok: false, msg: "Not found" };
+  }
+}
+
+// ============================================================
+// INDUSTRIES (separate sheet from Categories — both admin
+// managed, both fully dynamic, used in different places)
+// ============================================================
+
+function getIndustries() {
+  var cached = getCache_('industries_list');
+  if (cached) return cached;
+  var sheet = getSheet(VENDOR_SHEET_ID, "Industries");
+  if (sheet.getLastRow() < 1 || sheet.getRange(1,1).getValue() === "") {
+    var now = new Date().toISOString();
+    var defaults = [
+      ["ID","Name","Icon","CreatedAt"],
+      ["IND_1","Food Processing","🍽️",now],
+      ["IND_2","Textile & Garments","🧵",now],
+      ["IND_3","Jewellery","💎",now],
+      ["IND_4","Agricultural Commodities","🌾",now],
+      ["IND_5","Hospitals","🏥",now],
+      ["IND_6","Hotels & Resorts","🏨",now],
+      ["IND_7","Transporters","🚛",now],
+      ["IND_8","Chartered Accountants","📊",now],
+      ["IND_9","Software Development","💻",now],
+      ["IND_10","Advocates & Law Firms","⚖️",now],
+      ["IND_11","Real Estate Developers","🏗️",now],
+      ["IND_12","Clothing & Fashion","👗",now],
+      ["IND_13","Coaching Institutes","📚",now],
+      ["IND_14","Event Management","🎭",now],
+      ["IND_15","Automobile Dealers","🚗",now]
+    ];
+    sheet.getRange(1,1,defaults.length,4).setValues(defaults);
+    sheet.getRange(1,1,1,4).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+  }
+  var rows   = sheetToObjects(sheet);
+  var result = [];
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].Name) {
+      result.push({
+        id:   String(rows[i].ID   || ""),
+        name: String(rows[i].Name || ""),
+        icon: String(rows[i].Icon || "🏪")
+      });
+    }
+  }
+  var out = { ok: true, industries: result };
+  setCache_('industries_list', out, 300);
+  return out;
+}
+
+function addIndustry(body) {
+  if (!verifyAdmin(body.adminToken)) return { ok: false, msg: "Unauthorized" };
+  if (!body.name) return { ok: false, msg: "Industry name required." };
+
+  var sheet = getSheet(VENDOR_SHEET_ID, "Industries");
+  var rows  = sheetToObjects(sheet);
+  for (var i = 0; i < rows.length; i++) {
+    if (String(rows[i].Name).toLowerCase() === String(body.name).toLowerCase())
+      return { ok: false, msg: "Industry already exists." };
+  }
+  var id  = "IND_" + new Date().getTime();
+  var now = new Date().toISOString();
+  sheet.appendRow([id, String(body.name).trim(), body.icon || "🏪", now]);
+  clearCache_(['industries_list']);
+  return { ok: true, msg: "Industry added.", id: id };
+}
+
+function deleteIndustry(body) {
+  if (!verifyAdmin(body.adminToken)) return { ok: false, msg: "Unauthorized" };
+  if (!body.industryId) return { ok: false, msg: "Industry ID required." };
+
+  var sheet = getSheet(VENDOR_SHEET_ID, "Industries");
+  var rows  = sheetToObjects(sheet);
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].ID === body.industryId) {
+      sheet.deleteRow(rows[i]._row);
+      clearCache_(['industries_list']);
+      return { ok: true, msg: "Industry deleted." };
+    }
+  }
+  return { ok: false, msg: "Industry not found." };
+}
+
+// ============================================================
+// IMPACT STORIES (public submission form + admin approval)
+// ============================================================
+
+function addImpactStory(body) {
+  if (!body.name || !body.title || !body.text)
+    return { ok: false, msg: "All fields required." };
+
+  var sheet = getSheet(VENDOR_SHEET_ID, "ImpactStories");
+  if (sheet.getLastRow() < 1 || sheet.getRange(1,1).getValue() === "") {
+    sheet.getRange(1,1,1,6).setValues([["ID","Name","Business","Text","Date","Status"]]);
+    sheet.getRange(1,1,1,6).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+  }
+  var id = generateID("STO");
+  sheet.appendRow([
+    id, String(body.name).trim(), String(body.title).trim(),
+    String(body.text).trim(), body.date || new Date().toISOString(), "Pending"
+  ]);
+
+  notifyAdmin(
+    "New Impact Story Submitted",
+    "Name: " + body.name + "\nTitle: " + body.title + "\nStory: " + body.text + "\n\nApprove it in the Admin Panel → Impact Stories."
+  );
+
+  return { ok: true, msg: "Story submitted! It will appear after review." };
+}
+
+function getAllImpactStories(params) {
+  if (!verifyAdmin(params.adminToken)) return { ok: false, msg: "Unauthorized" };
+  var sheet = getSheet(VENDOR_SHEET_ID, "ImpactStories");
+  if (sheet.getLastRow() < 2) return { ok: true, stories: [] };
+  var rows   = sheetToObjects(sheet);
+  var result = [];
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    result.push({
+      id: String(r.ID||""), row: r._row, name: String(r.Name||""),
+      title: String(r.Business||""), text: String(r.Text||""),
+      date: String(r.Date||""), status: String(r.Status||"Pending")
+    });
+  }
+  result.sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
+  return { ok: true, stories: result };
+}
+
+function getApprovedImpactStories() {
+  var sheet = getSheet(VENDOR_SHEET_ID, "ImpactStories");
+  if (sheet.getLastRow() < 2) return { ok: true, stories: [] };
+  var rows   = sheetToObjects(sheet);
+  var result = [];
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    if (String(r.Status||"").trim() !== "Approved") continue;
+    result.push({
+      name: String(r.Name||""), title: String(r.Business||""),
+      text: String(r.Text||""), date: String(r.Date||"")
+    });
+  }
+  result.sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
+  return { ok: true, stories: result };
+}
+
+function updateImpactStoryStatus(body) {
+  if (!verifyAdmin(body.adminToken)) return { ok: false, msg: "Unauthorized" };
+  var sheet = getSheet(VENDOR_SHEET_ID, "ImpactStories");
+  var rows  = sheetToObjects(sheet);
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].ID === body.storyId) {
+      sheet.getRange(rows[i]._row, 6).setValue(body.status);
+      return { ok: true, msg: "Story " + body.status };
+    }
+  }
+  return { ok: false, msg: "Story not found." };
+}
+
+// ============================================================
+// WORK INQUIRIES (footer "Contact for similar work" form)
+// ============================================================
+
+function addWorkInquiry(body) {
+  if (!body.name || !body.contact || !body.text)
+    return { ok: false, msg: "All fields required." };
+
+  var sheet = getSheet(USER_SHEET_ID, "WorkInquiries");
+  if (sheet.getLastRow() < 1 || sheet.getRange(1,1).getValue() === "") {
+    sheet.getRange(1,1,1,5).setValues([["ID","Name","Contact","Text","Date"]]);
+    sheet.getRange(1,1,1,5).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+  }
+  var id = generateID("INQ");
+  sheet.appendRow([
+    id, String(body.name).trim(), String(body.contact).trim(),
+    String(body.text).trim(), body.date || new Date().toISOString()
+  ]);
+
+  notifyAdmin(
+    "New Work Inquiry (footer contact form)",
+    "Name: " + body.name + "\nContact: " + body.contact + "\nMessage: " + body.text
+  );
+
+  return { ok: true, msg: "Inquiry sent." };
+}
+
+function getWorkInquiries(params) {
+  if (!verifyAdmin(params.adminToken)) return { ok: false, msg: "Unauthorized" };
+  var sheet = getSheet(USER_SHEET_ID, "WorkInquiries");
+  if (sheet.getLastRow() < 2) return { ok: true, inquiries: [] };
+  var rows   = sheetToObjects(sheet);
+  var result = [];
+  for (var i = 0; i < rows.length; i++) {
+    var r = rows[i];
+    result.push({
+      id: String(r.ID||""), name: String(r.Name||""),
+      contact: String(r.Contact||""), text: String(r.Text||""),
+      date: String(r.Date||"")
+    });
+  }
+  result.sort(function(a,b){ return new Date(b.date)-new Date(a.date); });
+  return { ok: true, inquiries: result };
+}
+
+// ============================================================
+// SITE CONTENT (Terms & Conditions / Privacy Policy)
+// Editable from Admin Panel → "📄 Site Content" tab, no code
+// changes needed. Stored in a "Settings" sheet: Key | Value.
+// ============================================================
+
+function getSiteContent(params) {
+  var sheet = getSheet(USER_SHEET_ID, "Settings");
+  if (sheet.getLastRow() < 1 || sheet.getRange(1,1).getValue() === "") {
+    sheet.getRange(1,1,1,2).setValues([["Key","Value"]]);
+    sheet.getRange(1,1,1,2).setFontWeight("bold");
+    sheet.setFrozenRows(1);
+    sheet.appendRow(["terms",   "Terms & Conditions — edit this from the Admin Panel."]);
+    sheet.appendRow(["privacy", "Privacy Policy — edit this from the Admin Panel."]);
+  }
+  var rows = sheetToObjects(sheet);
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].Key === params.key) return { ok: true, text: String(rows[i].Value || "") };
+  }
+  return { ok: true, text: "" };
+}
+
+function updateSiteContent(body) {
+  if (!verifyAdmin(body.adminToken)) return { ok: false, msg: "Unauthorized" };
+  if (!body.key) return { ok: false, msg: "Missing content key." };
+
+  var sheet = getSheet(USER_SHEET_ID, "Settings");
+  var rows  = sheetToObjects(sheet);
+  for (var i = 0; i < rows.length; i++) {
+    if (rows[i].Key === body.key) {
+      sheet.getRange(rows[i]._row, 2).setValue(body.text || "");
+      return { ok: true, msg: "Saved." };
+    }
+  }
+  sheet.appendRow([body.key, body.text || ""]);
+  return { ok: true, msg: "Saved." };
+}
