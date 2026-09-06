@@ -33,20 +33,6 @@ export default function LoginPage() {
     }
   };
 
-  const handleQuickDemoAdmin = async () => {
-    setEmail('admin@acci.org');
-    setPassword('Admin@12345');
-    setLoading(true);
-    try {
-      const user = await authService.login('admin@acci.org', 'Admin@12345');
-      router.push('/admin');
-    } catch {
-      // Continue
-    } finally {
-      setLoading(false);
-    }
-  };
-
   return (
     <div className="bg-[#faf8f5] min-h-[85vh] flex items-center justify-center py-12 px-4 sm:px-6">
       <div className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-8 shadow-xl">
@@ -126,14 +112,11 @@ export default function LoginPage() {
             </Link>
           </p>
 
-          <div className="mt-4 pt-3 border-t border-dashed border-slate-200">
-            <button
-              onClick={handleQuickDemoAdmin}
-              className="inline-flex items-center gap-1.5 text-[11px] font-semibold text-slate-500 hover:text-[#07174a] cursor-pointer"
-            >
-              <ShieldCheck className="h-3.5 w-3.5 text-amber-500" />
-              <span>Quick Login as Chamber Admin (Demo)</span>
-            </button>
+          <div className="mt-4 pt-3 border-t border-slate-100 text-center">
+            <span className="inline-flex items-center gap-1 text-[11px] text-slate-400">
+              <ShieldCheck className="h-3.5 w-3.5 text-slate-400" />
+              <span>Chamber Secretariat & Member verified portal</span>
+            </span>
           </div>
         </div>
       </div>

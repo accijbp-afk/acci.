@@ -82,7 +82,11 @@ export const authService = {
         const user = await account.get();
         let role: 'admin' | 'member' | 'user' = 'user';
 
-        if (email.toLowerCase().includes('admin') || user.labels?.includes('admin')) {
+        if (
+          user.labels?.includes('admin') ||
+          email.toLowerCase() === 'admin@acci.org' ||
+          email.toLowerCase() === 'admin@accijabalpur.com'
+        ) {
           role = 'admin';
         } else {
           role = 'member';
@@ -111,8 +115,8 @@ export const authService = {
     const role: 'admin' | 'member' | 'user' =
       email.toLowerCase().includes('admin') || email === 'admin@acci.org' ? 'admin' : 'member';
 
-    const mockUser: UserProfile = {
-      userId: 'usr_local_demo',
+    const fallbackUser: UserProfile = {
+      userId: 'usr_' + Date.now(),
       name: email === 'admin@acci.org' ? 'Chamber Secretariat Admin' : email.split('@')[0],
       email,
       phone: '+91 8319565363',
@@ -122,10 +126,10 @@ export const authService = {
     };
 
     if (typeof window !== 'undefined') {
-      localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(mockUser));
+      localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(fallbackUser));
     }
 
-    return mockUser;
+    return fallbackUser;
   },
 
   async getCurrentUser(): Promise<UserProfile | null> {
@@ -134,7 +138,12 @@ export const authService = {
     if (isAppwriteConfigured()) {
       try {
         const user = await account.get();
-        const role = user.labels?.includes('admin') || user.email.includes('admin') ? 'admin' : 'member';
+        const role =
+          user.labels?.includes('admin') ||
+          user.email.toLowerCase() === 'admin@acci.org' ||
+          user.email.toLowerCase() === 'admin@accijabalpur.com'
+            ? 'admin'
+            : 'member';
         return {
           userId: user.$id,
           name: user.name,

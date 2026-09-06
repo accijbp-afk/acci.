@@ -33,7 +33,10 @@ export const jobsService = {
           APPWRITE_CONFIG.collections.jobs,
           queries
         );
-        return res.documents as unknown as JobListing[];
+        return (res.documents as unknown as JobListing[]).map((doc) => ({
+          ...doc,
+          id: doc.$id || doc.id,
+        }));
       } catch (err) {
         console.warn('Appwrite jobs fetch error', err);
       }
@@ -100,5 +103,26 @@ export const jobsService = {
       return true;
     }
     return false;
+  },
+
+  async deleteJob(id: string): Promise<boolean> {
+    if (isAppwriteConfigured()) {
+      try {
+        await databases.deleteDocument(
+          APPWRITE_CONFIG.databaseId,
+          APPWRITE_CONFIG.collections.jobs,
+          id
+        );
+      } catch {
+        // Continue
+      }
+    }
+
+    const list = getLocalJobs();
+    const filtered = list.filter((j) => j.id !== id && j.$id !== id);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_JOBS_KEY, JSON.stringify(filtered));
+    }
+    return true;
   },
 };

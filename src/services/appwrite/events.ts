@@ -28,7 +28,10 @@ export const eventsService = {
           APPWRITE_CONFIG.collections.events,
           [Query.orderAsc('date'), Query.limit(50)]
         );
-        return res.documents as unknown as ChamberEvent[];
+        return (res.documents as unknown as ChamberEvent[]).map((doc) => ({
+          ...doc,
+          id: doc.$id || doc.id,
+        }));
       } catch (err) {
         console.warn('Appwrite events fetch failed, using seed data', err);
       }

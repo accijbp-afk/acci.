@@ -60,7 +60,10 @@ export const inquiriesService = {
           APPWRITE_CONFIG.collections.contact,
           [Query.orderDesc('createdAt'), Query.limit(100)]
         );
-        return res.documents as unknown as ContactSubmission[];
+        return (res.documents as unknown as ContactSubmission[]).map((doc) => ({
+          ...doc,
+          id: doc.$id || doc.id,
+        }));
       } catch (err) {
         console.warn('Appwrite inquiries fetch error', err);
       }
@@ -92,5 +95,26 @@ export const inquiriesService = {
       return true;
     }
     return false;
+  },
+
+  async deleteInquiry(id: string): Promise<boolean> {
+    if (isAppwriteConfigured()) {
+      try {
+        await databases.deleteDocument(
+          APPWRITE_CONFIG.databaseId,
+          APPWRITE_CONFIG.collections.contact,
+          id
+        );
+      } catch {
+        // Continue
+      }
+    }
+
+    const list = getLocalInquiries();
+    const filtered = list.filter((i) => i.id !== id && i.$id !== id);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_INQUIRIES_KEY, JSON.stringify(filtered));
+    }
+    return true;
   },
 };

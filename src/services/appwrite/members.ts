@@ -80,7 +80,10 @@ export const membersService = {
           queries
         );
 
-        let docs = res.documents as unknown as MemberBusiness[];
+        let docs = (res.documents as unknown as MemberBusiness[]).map((doc) => ({
+          ...doc,
+          id: doc.$id || doc.id,
+        }));
         if (params?.search) {
           const s = params.search.toLowerCase();
           docs = docs.filter(
@@ -165,13 +168,53 @@ export const membersService = {
 
     if (isAppwriteConfigured()) {
       try {
+        const sanitizedPayload = {
+          id,
+          userId: data.userId || '',
+          businessName: data.businessName,
+          legalName: data.legalName || '',
+          ownerName: data.ownerName,
+          incomeType: data.incomeType || '',
+          category: data.category,
+          industry: data.industry,
+          description: data.description,
+          tagline: data.tagline || '',
+          phone: data.phone,
+          whatsapp: data.whatsapp || '',
+          email: data.email || '',
+          website: data.website || '',
+          social: data.social || '',
+          address: data.address,
+          city: data.city || 'Jabalpur',
+          pinCode: data.pinCode || '',
+          maps: data.maps || '',
+          timing: data.timing || '',
+          gst: data.gst || '',
+          estYear: data.estYear || '',
+          employees: data.employees || '',
+          services: data.services || '',
+          products: data.products || '',
+          plan: data.plan,
+          status: 'pending',
+          featured: false,
+          rating: 0,
+          reviewCount: 0,
+          workPhotos: data.workPhotos || [],
+          logoUrl: data.logoUrl || '',
+          joinedAt: newMember.joinedAt,
+        };
+
         const res = await databases.createDocument(
           APPWRITE_CONFIG.databaseId,
           APPWRITE_CONFIG.collections.members,
           ID.unique(),
-          newMember
+          sanitizedPayload
         );
-        return res as unknown as MemberBusiness;
+        return {
+          ...newMember,
+          id: res.$id,
+          $id: res.$id,
+        };
       } catch (err) {
         console.warn('Appwrite create member error, saved locally', err);
       }
@@ -248,6 +291,25 @@ export const membersService = {
     return all.filter((r) => r.vendorId === vendorId && r.status === 'approved');
   },
 
+  async deleteMember(id: string): Promise<boolean> {
+    if (isAppwriteConfigured()) {
+      try {
+        await databases.deleteDocument(
+          APPWRITE_CONFIG.databaseId,
+          APPWRITE_CONFIG.collections.members,
+          id
+        );
+      } catch {
+        // Continue
+      }
+    }
+
+    const local = getLocalMembers();
+    const filtered = local.filter((m) => m.id !== id && m.$id !== id);
+    saveLocalMembers(filtered);
+    return true;
+  },
+
   async getAllReviewsAdmin(): Promise<BusinessReview[]> {
     if (isAppwriteConfigured()) {
       try {
@@ -256,7 +318,10 @@ export const membersService = {
           APPWRITE_CONFIG.collections.reviews,
           [Query.limit(100)]
         );
-        return res.documents as unknown as BusinessReview[];
+        return (res.documents as unknown as BusinessReview[]).map((doc) => ({
+          ...doc,
+          id: doc.$id || doc.id,
+        }));
       } catch {
         // Fall back
       }
@@ -294,6 +359,19 @@ export const membersService = {
   },
 
   async updateReviewStatus(id: string, status: 'approved' | 'pending'): Promise<boolean> {
+    if (isAppwriteConfigured()) {
+      try {
+        await databases.updateDocument(
+          APPWRITE_CONFIG.databaseId,
+          APPWRITE_CONFIG.collections.reviews,
+          id,
+          { status }
+        );
+      } catch {
+        // Fall back
+      }
+    }
+
     const list = getLocalReviews();
     const idx = list.findIndex((r) => r.id === id || r.$id === id);
     if (idx !== -1) {
@@ -304,5 +382,26 @@ export const membersService = {
       return true;
     }
     return false;
+  },
+
+  async deleteReview(id: string): Promise<boolean> {
+    if (isAppwriteConfigured()) {
+      try {
+        await databases.deleteDocument(
+          APPWRITE_CONFIG.databaseId,
+          APPWRITE_CONFIG.collections.reviews,
+          id
+        );
+      } catch {
+        // Fall back
+      }
+    }
+
+    const list = getLocalReviews();
+    const filtered = list.filter((r) => r.id !== id && r.$id !== id);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_REVIEWS_KEY, JSON.stringify(filtered));
+    }
+    return true;
   },
 };

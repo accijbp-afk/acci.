@@ -28,7 +28,10 @@ export const newsService = {
           APPWRITE_CONFIG.collections.news,
           [Query.orderDesc('publishedAt'), Query.limit(50)]
         );
-        return res.documents as unknown as ChamberNews[];
+        return (res.documents as unknown as ChamberNews[]).map((doc) => ({
+          ...doc,
+          id: doc.$id || doc.id,
+        }));
       } catch (err) {
         console.warn('Appwrite news fetch error', err);
       }
