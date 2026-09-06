@@ -1,0 +1,807 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Business Directory – ACCI Jabalpur</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Crect width='100' height='100' rx='15' fill='%2307174a'/%3E%3Ctext y='78' x='10' font-size='72' font-family='Georgia,serif' font-weight='900' fill='white'%3EA%3C/text%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700;800&family=DM+Sans:opsz,wght@9..40,300;9..40,400;9..40,500;9..40,600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --navy:#07174a;--royal:#1540a8;--blue:#1a56db;--sky:#3b82f6;
+  --light-blue:#bfdbfe;--pale:#eff6ff;--white:#fff;
+  --g50:#f8fafc;--g100:#f1f5f9;--g200:#e2e8f0;--g300:#cbd5e1;
+  --g400:#94a3b8;--g500:#64748b;--g600:#475569;--g700:#334155;--g800:#1e293b;
+  --gold:#d97706;--green:#16a34a;--red:#dc2626;
+  --sh-sm:0 1px 3px rgba(0,0,0,.08);
+  --sh-md:0 4px 16px rgba(0,0,0,.10);
+  --sh-lg:0 12px 40px rgba(0,0,0,.13);
+  --r8:8px;--r12:12px;--r16:16px;--r24:24px;
+}
+*{margin:0;padding:0;box-sizing:border-box;}
+html{scroll-behavior:smooth;}
+body{font-family:'DM Sans',sans-serif;color:var(--g800);background:var(--g50);min-height:100vh;}
+a{text-decoration:none;color:inherit;}
+button,input,select,textarea{font-family:'DM Sans',sans-serif;}
+::-webkit-scrollbar{width:5px;}
+::-webkit-scrollbar-track{background:var(--g100);}
+::-webkit-scrollbar-thumb{background:var(--royal);border-radius:3px;}
+
+/* ── TOAST ────────────────────────────────────────── */
+#toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(120px);background:var(--navy);color:#fff;padding:11px 22px;border-radius:50px;font-size:14px;font-weight:500;z-index:9999;transition:transform .35s cubic-bezier(.34,1.56,.64,1);pointer-events:none;white-space:nowrap;box-shadow:var(--sh-lg);}
+#toast.show{transform:translateX(-50%) translateY(0);}
+#toast.error{background:var(--red);}
+
+/* ── MODAL ────────────────────────────────────────── */
+.ov{display:none;position:fixed;inset:0;background:rgba(7,23,74,.55);backdrop-filter:blur(4px);z-index:1000;align-items:flex-start;justify-content:center;padding:20px;overflow-y:auto;}
+.ov.open{display:flex;}
+.mbox{background:#fff;border-radius:var(--r24);width:100%;max-width:560px;box-shadow:var(--sh-lg);animation:mIn .3s cubic-bezier(.34,1.2,.64,1);margin:auto;}
+@keyframes mIn{from{transform:scale(.92);opacity:0}to{transform:scale(1);opacity:1}}
+.mhd{padding:22px 26px 0;display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid var(--g100);padding-bottom:16px;}
+.mhd h2{font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:var(--navy);}
+.mcl{width:34px;height:34px;border:none;background:var(--g100);border-radius:50%;font-size:17px;cursor:pointer;color:var(--g600);display:flex;align-items:center;justify-content:center;transition:all .2s;}
+.mcl:hover{background:var(--g200);}
+.mbdy{padding:20px 26px 26px;}
+
+/* ── FORMS ────────────────────────────────────────── */
+.fg{margin-bottom:14px;}
+.fg label{display:block;font-size:12px;font-weight:600;color:var(--g700);margin-bottom:5px;}
+.fg label .r{color:var(--red);}
+.fi{width:100%;padding:10px 13px;border:1.5px solid var(--g200);border-radius:var(--r8);font-size:14px;color:var(--g800);transition:border-color .2s;background:#fff;outline:none;}
+.fi:focus{border-color:var(--royal);box-shadow:0 0 0 3px rgba(21,64,168,.1);}
+.fi::placeholder{color:var(--g400);}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+
+/* ── BUTTONS ──────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;gap:7px;padding:10px 20px;border-radius:var(--r8);font-size:14px;font-weight:600;border:none;transition:all .2s;cursor:pointer;white-space:nowrap;}
+.btn-p{background:var(--royal);color:#fff;}.btn-p:hover{background:var(--navy);transform:translateY(-1px);}
+.btn-w{background:#fff;color:var(--navy);border:1.5px solid var(--g200);}.btn-w:hover{background:var(--g50);}
+.btn-gold{background:var(--gold);color:#fff;}.btn-gold:hover{background:#b45309;}
+.btn-gh{background:transparent;border:1.5px solid var(--g200);color:var(--g700);}.btn-gh:hover{background:var(--g50);}
+.btn-sm{padding:7px 15px;font-size:13px;}
+.btn-full{width:100%;justify-content:center;}
+.btn-load{opacity:.6;pointer-events:none;}
+
+/* ── NAV ──────────────────────────────────────────── */
+#nav{position:sticky;top:0;z-index:500;background:var(--navy);padding:0 clamp(1rem,4vw,2.5rem);height:64px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 20px rgba(7,23,74,.4);}
+.nav-brand{display:flex;align-items:center;gap:11px;cursor:pointer;text-decoration:none;}
+.nav-logo{width:40px;height:40px;background:#fff;border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-weight:800;font-size:12px;color:var(--navy);flex-shrink:0;}
+.nav-brand-t .n1{font-size:13px;font-weight:600;color:#fff;line-height:1.2;}
+.nav-brand-t .n2{font-size:9.5px;color:var(--light-blue);letter-spacing:1.2px;text-transform:uppercase;}
+.back-btn{display:flex;align-items:center;gap:6px;background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:600;cursor:pointer;transition:all .2s;text-decoration:none;}
+.back-btn:hover{background:rgba(255,255,255,.18);}
+.nav-right{display:flex;align-items:center;gap:8px;}
+#nav{position:sticky;top:0;z-index:500;background:var(--navy);padding:0 clamp(1rem,4vw,2.5rem);height:64px;display:flex;align-items:center;gap:0;box-shadow:0 2px 20px rgba(7,23,74,.4);}
+.nav-brand-t .n1{font-size:13px;font-weight:600;color:#fff;line-height:1.2;}
+.nav-links{display:flex;align-items:center;gap:1px;flex:1;justify-content:center;}
+.nav-links a{color:rgba(255,255,255,.75);font-size:13px;font-weight:500;padding:6px 12px;border-radius:7px;transition:all .2s;}
+.nav-links a:hover{color:#fff;background:rgba(255,255,255,.1);}
+.collab-badge{display:flex;align-items:center;position:relative;background:linear-gradient(135deg,rgba(255,255,255,.04),rgba(255,255,255,.08));border-radius:12px;padding:8px 20px;margin-left:10px;text-decoration:none;transition:all .3s;flex-shrink:0;overflow:hidden;}
+.collab-badge::before{content:'';position:absolute;inset:0;border-radius:12px;padding:1.5px;background:linear-gradient(90deg,#fbbf24,#ffffff,#3b82f6,#fbbf24);background-size:300% 100%;-webkit-mask:linear-gradient(#fff 0 0) content-box,linear-gradient(#fff 0 0);-webkit-mask-composite:xor;mask-composite:exclude;animation:borderShine 3s linear infinite;}
+@keyframes borderShine{0%{background-position:0% 0%}100%{background-position:300% 0%}}
+.collab-badge:hover{background:linear-gradient(135deg,rgba(255,255,255,.08),rgba(255,255,255,.14));transform:translateY(-1px);}
+.collab-badge:hover::before{animation-duration:1.2s;}
+.collab-txt{line-height:1.35;}
+.collab-txt .ct1{font-size:9px;color:rgba(255,255,255,.5);letter-spacing:1.3px;text-transform:uppercase;font-weight:500;}
+.collab-txt .ct2{font-size:14px;font-weight:800;color:#fbbf24;letter-spacing:.1px;text-shadow:0 0 12px rgba(251,191,36,.5);}
+.collab-txt .ct3{font-size:11px;color:rgba(255,255,255,.7);font-weight:500;margin-top:2px;}
+@media(max-width:1000px){.collab-badge{display:none;}}
+
+/* ── PAGE HEADER ──────────────────────────────────── */
+.page-hero{background:linear-gradient(135deg,var(--navy) 0%,#1a3c9f 55%,#163282 100%);padding:44px clamp(1rem,4vw,2.5rem) 48px;position:relative;overflow:hidden;}
+.page-hero::before{content:'';position:absolute;inset:0;background:url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='%23ffffff' fill-opacity='0.03'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4z'/%3E%3C/g%3E%3C/svg%3E");}
+.page-hero-in{max-width:1200px;margin:0 auto;position:relative;}
+.page-hero h1{font-family:'Playfair Display',serif;font-size:clamp(1.8rem,4vw,2.8rem);font-weight:800;color:#fff;margin-bottom:8px;}
+.page-hero p{font-size:15px;color:rgba(255,255,255,.72);max-width:520px;line-height:1.7;}
+.hero-stats-row{display:flex;gap:28px;margin-top:24px;flex-wrap:wrap;}
+.hstat{text-align:left;}
+.hstat .n{font-family:'Playfair Display',serif;font-size:1.7rem;font-weight:700;color:#fff;}
+.hstat .l{font-size:11px;color:var(--light-blue);margin-top:2px;}
+
+/* ── SEARCH + FILTER BAR ──────────────────────────── */
+#search-bar{background:#fff;padding:20px clamp(1rem,4vw,2.5rem);border-bottom:1px solid var(--g200);position:sticky;top:64px;z-index:100;box-shadow:0 2px 8px rgba(0,0,0,.06);}
+.search-bar-in{max-width:1200px;margin:0 auto;display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+.search-wrap{display:flex;flex:1;min-width:240px;border:2px solid var(--royal);border-radius:50px;overflow:hidden;background:#fff;}
+.search-wrap input{flex:1;border:none;outline:none;padding:10px 18px;font-size:14px;color:var(--g800);}
+.search-wrap input::placeholder{color:var(--g400);}
+.sbtn{background:var(--royal);color:#fff;border:none;padding:0 22px;font-size:14px;font-weight:600;cursor:pointer;transition:background .2s;white-space:nowrap;}
+.sbtn:hover{background:var(--navy);}
+.cat-select{padding:10px 14px;border:1.5px solid var(--g200);border-radius:50px;font-size:13.5px;color:var(--g700);background:var(--g50);outline:none;cursor:pointer;min-width:160px;}
+.result-count{font-size:13px;color:var(--g500);white-space:nowrap;}
+.sort-select{padding:8px 12px;border:1.5px solid var(--g200);border-radius:8px;font-size:13px;color:var(--g700);background:#fff;outline:none;cursor:pointer;}
+
+/* ── CATEGORY CHIPS ───────────────────────────────── */
+#cat-chips-bar{background:#fff;padding:0 clamp(1rem,4vw,2.5rem) 14px;border-bottom:1px solid var(--g200);}
+.chips-in{max-width:1200px;margin:0 auto;display:flex;gap:8px;overflow-x:auto;padding-top:14px;scrollbar-width:none;}
+.chips-in::-webkit-scrollbar{display:none;}
+.chip{display:inline-flex;align-items:center;gap:5px;padding:6px 14px;background:var(--g100);border:1.5px solid var(--g200);border-radius:50px;font-size:12.5px;font-weight:500;color:var(--g700);cursor:pointer;transition:all .2s;white-space:nowrap;flex-shrink:0;}
+.chip:hover,.chip.active{background:var(--royal);color:#fff;border-color:var(--royal);}
+.chip.active{font-weight:600;}
+
+/* ── MAIN LAYOUT ──────────────────────────────────── */
+.main{max-width:1200px;margin:0 auto;padding:28px clamp(1rem,4vw,2.5rem);}
+.grid-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:20px;flex-wrap:wrap;gap:10px;}
+.grid-header h2{font-family:'Playfair Display',serif;font-size:1.25rem;font-weight:700;color:var(--navy);}
+
+/* ── BUSINESS CARDS ───────────────────────────────── */
+#biz-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(290px,1fr));gap:18px;}
+.bcard{background:#fff;border:1.5px solid var(--g200);border-radius:var(--r16);overflow:hidden;transition:all .25s;cursor:pointer;}
+.bcard:hover{border-color:var(--royal);transform:translateY(-4px);box-shadow:var(--sh-lg);}
+.bcard-hd{background:var(--pale);padding:17px 19px;display:flex;align-items:center;gap:12px;border-bottom:1px solid var(--g100);}
+.bava{width:50px;height:50px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:19px;font-weight:700;color:#fff;flex-shrink:0;}
+.bnm{font-size:14.5px;font-weight:600;color:var(--navy);}
+.bcat{font-size:11.5px;color:var(--royal);font-weight:500;margin-top:2px;}
+.bbadge{margin-left:auto;font-size:10px;font-weight:700;padding:3px 9px;border-radius:20px;white-space:nowrap;}
+.bbadge-v{background:#dcfce7;color:#15803d;}
+.bbadge-p{background:#fef3c7;color:#92400e;}
+.bcard-bd{padding:13px 19px;}
+.bdesc{font-size:12.5px;color:var(--g500);line-height:1.6;margin-bottom:11px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;}
+.bmeta{display:flex;gap:9px;flex-wrap:wrap;}
+.bmeta span{font-size:11.5px;color:var(--g500);}
+.stars{color:#f59e0b;}
+.bcard-ft{padding:11px 19px;border-top:1px solid var(--g100);display:flex;gap:7px;}
+.bbtn{flex:1;padding:8px;border-radius:7px;font-size:12px;font-weight:600;border:none;cursor:pointer;transition:all .2s;font-family:'DM Sans',sans-serif;}
+.bbtn-p{background:var(--royal);color:#fff;}.bbtn-p:hover{background:var(--navy);}
+.bbtn-s{background:var(--pale);color:var(--royal);border:1px solid var(--light-blue)!important;}.bbtn-s:hover{background:var(--light-blue);}
+
+/* ── LOAD MORE ────────────────────────────────────── */
+#load-more-wrap{text-align:center;padding:32px 0;}
+
+/* ── EMPTY / SPINNER ──────────────────────────────── */
+.spin{width:36px;height:36px;border:3px solid var(--g200);border-top-color:var(--royal);border-radius:50%;animation:sp .7s linear infinite;margin:48px auto;}
+@keyframes sp{to{transform:rotate(360deg)}}
+.empty{text-align:center;padding:64px 20px;color:var(--g400);}
+.empty .ei{font-size:52px;margin-bottom:14px;}
+.empty p{font-size:15px;}
+
+/* ── FOOTER ───────────────────────────────────────── */
+footer{background:var(--navy);color:rgba(255,255,255,.6);padding:32px clamp(1rem,4vw,2.5rem);text-align:center;margin-top:40px;}
+footer p{font-size:13px;}
+footer a{color:#fbbf24;}
+
+/* ── RESPONSIVE ───────────────────────────────────── */
+@media(max-width:640px){
+  #biz-grid{grid-template-columns:1fr;}
+  .frow{grid-template-columns:1fr;}
+  .search-bar-in{flex-direction:column;align-items:stretch;}
+  .search-wrap{min-width:unset;}
+}
+</style>
+</head>
+<body>
+
+<div id="toast"></div>
+
+<!-- NAV -->
+<nav id="nav">
+  <!-- LEFT: ACCI Brand -->
+  <a href="index.html" style="flex-shrink:0;display:flex;align-items:center;gap:11px;text-decoration:none;margin-right:8px;">
+    <div class="nav-logo">ACCI</div>
+    <div class="nav-brand-t">
+      <div class="n1">Agrawal Chamber of Commerce and Industries</div>
+    </div>
+  </a>
+  <!-- CENTER: Nav links -->
+  <div class="nav-links">
+    <a href="index.html">Home</a>
+    <a href="index.html#jobs">Jobs</a>
+    <a href="index.html#events">Events</a>
+    <a href="index.html#gallery">Gallery</a>
+    <a href="index.html#about">About</a>
+  </div>
+  <!-- RIGHT: Lawgical + Back + List Business -->
+  <div style="display:flex;align-items:center;gap:8px;flex-shrink:0;">
+    <a href="https://lawgicalstartup.com/" target="_blank" class="collab-badge" title="Digitally Enabled by Lawgical Startup">
+      <div class="collab-txt">
+        <div class="ct1">Digitally enabled by</div>
+        <div class="ct2">Lawgical Startup</div>
+      </div>
+    </a>
+    <a href="index.html" class="back-btn">← Home</a>
+    <button class="btn btn-gold btn-sm" onclick="handleListBusiness()">+ List Your Business</button>
+  </div>
+</nav>
+
+<!-- PAGE HERO -->
+<div class="page-hero">
+  <div class="page-hero-in">
+    <h1>Business Directory</h1>
+    <p>Find trusted businesses, services & professionals from the Agrawal community in Jabalpur.</p>
+    <div class="hero-stats-row" style="visibility:hidden;height:50px;"></div>
+  </div>
+</div>
+
+<!-- SEARCH BAR -->
+<div id="search-bar">
+  <div class="search-bar-in">
+    <div class="search-wrap">
+      <input type="text" id="s-input" placeholder="Search businesses, services, professionals…" onkeydown="if(event.key==='Enter')doSearch()">
+      <button class="sbtn" onclick="doSearch()">🔍 Search</button>
+    </div>
+    <select class="cat-select" id="s-cat" onchange="doSearch()" title="Business Category">
+      <option value="">All Categories</option>
+      <option>Wholesale</option>
+      <option>Retail</option>
+      <option>Manufacturing</option>
+      <option>Service Provider</option>
+      <option>Professional</option>
+      <option>Distribution</option>
+      <option>Import / Export</option>
+    </select>
+    <select class="cat-select" id="s-industry" onchange="doSearch()" title="Industry" style="min-width:160px;">
+      <option value="">All Industries</option>
+      <optgroup label="── Manufacturing ──">
+        <option>FMCG Manufacturing</option><option>Food Processing</option><option>Textile &amp; Garments</option>
+        <option>Pharmaceuticals</option><option>Steel &amp; Metal Products</option><option>Electronics Manufacturing</option>
+        <option>Furniture Manufacturing</option><option>Building Materials</option><option>Packaging &amp; Printing</option>
+        <option>Engineering &amp; Fabrication</option><option>Automobile Components</option>
+      </optgroup>
+      <optgroup label="── Trading / Wholesale ──">
+        <option>FMCG Wholesale</option><option>Agricultural Commodities</option>
+        <option>Steel &amp; Hardware Trading</option><option>Textile Trading</option>
+        <option>Medical Supplies Trading</option><option>Consumer Electronics Trading</option><option>General Trading</option>
+      </optgroup>
+      <optgroup label="── Retail ──">
+        <option>Jewellery</option><option>Grocery &amp; Supermarkets</option>
+        <option>Clothing &amp; Fashion</option><option>Electronics &amp; Appliances</option>
+        <option>Furniture &amp; Home Décor</option><option>Mobile &amp; Accessories</option>
+        <option>Departmental Stores</option><option>E-commerce Sellers</option>
+      </optgroup>
+      <optgroup label="── Professional Services ──">
+        <option>Chartered Accountants</option><option>Company Secretaries</option>
+        <option>Advocates &amp; Law Firms</option><option>Tax Consultants</option>
+        <option>Business Consultants</option><option>Recruitment Agencies</option>
+      </optgroup>
+      <optgroup label="── Finance ──">
+        <option>Banking</option><option>NBFC</option><option>Insurance Advisors</option>
+        <option>Investment Advisory</option><option>Loan Consultants</option>
+      </optgroup>
+      <optgroup label="── IT &amp; Technology ──">
+        <option>Software Development</option><option>IT Services</option>
+        <option>Digital Marketing</option><option>AI &amp; Automation</option>
+      </optgroup>
+      <optgroup label="── Healthcare ──">
+        <option>Hospitals</option><option>Clinics</option><option>Medical Practitioners</option>
+        <option>Pharmacies</option><option>Ayurveda &amp; Wellness</option>
+      </optgroup>
+      <optgroup label="── Education ──">
+        <option>Schools</option><option>Coaching Institutes</option><option>Study Abroad</option>
+      </optgroup>
+      <optgroup label="── Hospitality ──">
+        <option>Hotels &amp; Resorts</option><option>Restaurants &amp; Cafes</option>
+        <option>Catering Services</option><option>Travel Agencies</option>
+      </optgroup>
+      <optgroup label="── Logistics ──">
+        <option>Transporters</option><option>Warehousing</option><option>Packers &amp; Movers</option>
+      </optgroup>
+      <optgroup label="── Agriculture ──">
+        <option>Farming</option><option>Fertilizers &amp; Seeds</option><option>Dairy</option><option>Agro Processing</option>
+      </optgroup>
+      <optgroup label="── Media &amp; Events ──">
+        <option>Advertising Agencies</option><option>Event Management</option><option>Photography &amp; Videography</option>
+      </optgroup>
+      <optgroup label="── Automotive ──">
+        <option>Automobile Dealers</option><option>Service Centres</option>
+      </optgroup>
+      <optgroup label="── Others ──">
+        <option>NGO</option><option>Others</option>
+      </optgroup>
+    </select>
+    <select class="sort-select" id="s-sort" onchange="doSearch()">
+      <option value="default">Sort: Featured First</option>
+      <option value="rating">Sort: Highest Rated</option>
+      <option value="name">Sort: A → Z</option>
+    </select>
+    <span class="result-count" id="result-count"></span>
+  </div>
+</div>
+
+<!-- CATEGORY CHIPS -->
+<div id="cat-chips-bar">
+  <div class="chips-in" id="chips-wrap">
+    <div class="chip active" onclick="filterChip('',this,'cat')">🏪 All</div>
+    <div class="chip" onclick="filterChip('Wholesale',this,'cat')">📦 Wholesale</div>
+    <div class="chip" onclick="filterChip('Retail',this,'cat')">🛍️ Retail</div>
+    <div class="chip" onclick="filterChip('Manufacturing',this,'cat')">🏭 Manufacturing</div>
+    <div class="chip" onclick="filterChip('Service Provider',this,'cat')">🔧 Service Provider</div>
+    <div class="chip" onclick="filterChip('Professional',this,'cat')">💼 Professional</div>
+    <div class="chip" onclick="filterChip('Distribution',this,'cat')">🚛 Distribution</div>
+    <div class="chip" onclick="filterChip('Import / Export',this,'cat')">🌐 Import / Export</div>
+  </div>
+    
+</div>
+
+<!-- MAIN GRID -->
+<div class="main">
+  <div class="grid-header">
+    <h2 id="grid-title">All Businesses</h2>
+    <div style="display:flex;gap:8px;flex-wrap:wrap;" id="active-filters"></div>
+  </div>
+  <div id="biz-grid"><div class="spin"></div></div>
+  <div id="load-more-wrap" style="display:none;">
+    <button class="btn btn-gh" onclick="loadMore()">Load More Businesses →</button>
+  </div>
+</div>
+
+<!-- FOOTER -->
+<footer style="background:var(--navy);color:rgba(255,255,255,.6);padding:40px clamp(1rem,4vw,2.5rem) 24px;">
+  <div style="max-width:1200px;margin:0 auto;">
+    <div style="display:grid;grid-template-columns:1.4fr 1fr 1fr;gap:32px;margin-bottom:24px;">
+      <div>
+        <div style="font-family:'Playfair Display',serif;font-size:1.3rem;font-weight:700;color:#fff;margin-bottom:10px;">ACCI — Jabalpur</div>
+        <p style="font-size:13px;line-height:1.7;color:rgba(255,255,255,.55);">Agrawal Chamber of Commerce and Industries, Jabalpur. The trusted platform for the Agrawal business community.</p>
+      </div>
+      <div>
+        <h4 style="color:#fff;font-size:13px;font-weight:600;margin-bottom:12px;">Categories</h4>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <a href="directory.html?cat=Wholesale" style="color:rgba(255,255,255,.6);font-size:13px;text-decoration:none;">📦 Wholesale</a>
+          <a href="directory.html?cat=Retail" style="color:rgba(255,255,255,.6);font-size:13px;text-decoration:none;">🛍️ Retail</a>
+          <a href="directory.html?cat=Manufacturing" style="color:rgba(255,255,255,.6);font-size:13px;text-decoration:none;">🏭 Manufacturing</a>
+          <a href="directory.html?cat=Service+Provider" style="color:rgba(255,255,255,.6);font-size:13px;text-decoration:none;">🔧 Service Provider</a>
+          <a href="directory.html?cat=Professional" style="color:rgba(255,255,255,.6);font-size:13px;text-decoration:none;">💼 Professional</a>
+          <a href="directory.html?cat=Distribution" style="color:rgba(255,255,255,.6);font-size:13px;text-decoration:none;">🚛 Distribution</a>
+          <a href="directory.html?cat=Import+%2F+Export" style="color:rgba(255,255,255,.6);font-size:13px;text-decoration:none;">🌐 Import / Export</a>
+        </div>
+      </div>
+      <div>
+        <h4 style="color:#fff;font-size:13px;font-weight:600;margin-bottom:12px;">Contact ACCI</h4>
+        <div style="display:flex;flex-direction:column;gap:8px;">
+          <span style="font-size:13px;color:rgba(255,255,255,.6);">📍 Jabalpur, M.P.</span>
+          <a href="tel:+918319565363" style="color:rgba(255,255,255,.6);font-size:13px;text-decoration:none;">📞 +91 8319565363</a>
+          <a href="mailto:accijabalpur@gmail.com" style="color:rgba(255,255,255,.6);font-size:13px;text-decoration:none;">✉️ accijabalpur@gmail.com</a>
+        </div>
+      </div>
+    </div>
+    <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:12px;border-top:1px solid rgba(255,255,255,.1);padding-top:20px;">
+      <div style="font-size:12px;">© 2026 Agrawal Chamber of Commerce &amp; Industries, Jabalpur.</div>
+      <div style="display:flex;align-items:center;gap:8px;flex-wrap:wrap;">
+        <span style="font-size:13px;">Digitally enabled by <a href="https://lawgicalstartup.com/" target="_blank" style="color:#fbbf24;font-weight:700;">Lawgical Startup</a></span>
+        <span style="color:rgba(255,255,255,.25);">·</span>
+        <a href="mailto:cto@lawgicalstartup.com?subject=Website%20Development%20Enquiry&body=Hi%20Rounak%2C%0A%0AI%20saw%20the%20ACCI%20website%20and%20would%20like%20to%20discuss%20a%20similar%20project." style="color:rgba(255,255,255,.55);font-size:11px;text-decoration:underline;">Contact for similar work →</a>
+      </div>
+    </div>
+  </div>
+</footer>
+
+<!-- BUSINESS DETAIL MODAL -->
+<div class="ov" id="m-biz">
+  <div class="mbox" style="max-width:580px;">
+    <div class="mhd"><h2 id="biz-d-nm">Business</h2><button class="mcl" onclick="closeM('m-biz')">✕</button></div>
+    <div class="mbdy" id="biz-d-body"></div>
+  </div>
+</div>
+
+<!-- REGISTER PROMPT MODAL -->
+<div class="ov" id="m-reg-prompt">
+  <div class="mbox" style="max-width:420px;">
+    <div class="mhd"><h2>Register to List Your Business</h2><button class="mcl" onclick="closeM('m-reg-prompt')">✕</button></div>
+    <div class="mbdy">
+      <p style="font-size:14px;color:var(--g500);margin-bottom:20px;line-height:1.7;">You need to create a free ACCI account first before listing your business. It only takes 2 minutes!</p>
+      <div style="display:flex;gap:10px;">
+        <a href="index.html#register" class="btn btn-p btn-full" onclick="sessionStorage.setItem('openVendor','1')">Create Account →</a>
+        <a href="index.html#login" class="btn btn-gh btn-full" onclick="sessionStorage.setItem('openVendor','1')">I have an account</a>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ── CONFIG ─────────────────────────────────────────────────
+const API = "https://script.google.com/macros/s/AKfycbxvVJ1Wt7jqkKaMYuBmHjrPLXJBVDYppka-HIA_ca5GOq7hHFUj9iurGryfAPuMWEOr2g/exec";
+
+const BIZ_COLORS = [
+  '#1540a8','#0e7490','#15803d','#7c3aed','#b45309',
+  '#be185d','#dc2626','#374151','#0f766e','#9333ea'
+];
+
+// ── STATE ──────────────────────────────────────────────────
+let offset       = 0;
+const LIMIT      = 12;
+let currentCat = '';
+let currentIndustry = '';
+let currentSearch= '';
+let currentSort  = 'default';
+let allCategories= [];
+const _vendorMap = {};
+let currentUser  = null;
+
+// ── INIT ───────────────────────────────────────────────────
+window.addEventListener('DOMContentLoaded', () => {
+  restoreSession();
+  // Read URL params for pre-filtering
+  const params = new URLSearchParams(window.location.search);
+  if (params.get('cat'))      { currentCat      = params.get('cat');      document.getElementById('s-cat').value = currentCat; }
+  if (params.get('industry')) { currentIndustry = params.get('industry'); }
+  if (params.get('search'))   { currentSearch   = params.get('search');   document.getElementById('s-input').value = currentSearch; }
+  loadCategoriesAndStats();
+  loadVendors(true);
+});
+
+// ── SESSION ────────────────────────────────────────────────
+function restoreSession() {
+  const saved = localStorage.getItem('acci_user');
+  if (saved) try { currentUser = JSON.parse(saved); } catch(e){}
+}
+
+// ── API ─────────────────────────────────────────────────────
+async function apiGet(params) {
+  const qs = new URLSearchParams(params).toString();
+  const r  = await fetch(`${API}?${qs}`);
+  return r.json();
+}
+async function apiPost(body) {
+  const r = await fetch(API, { method:'POST', body: JSON.stringify(body) });
+  return r.json();
+}
+
+// ── TOAST ──────────────────────────────────────────────────
+let toastTmr;
+function showToast(msg, isErr) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className   = 'show' + (isErr ? ' error' : '');
+  clearTimeout(toastTmr);
+  toastTmr = setTimeout(() => t.className = '', 3500);
+}
+
+// ── MODAL ──────────────────────────────────────────────────
+function openM(id)  { document.getElementById(id).classList.add('open'); }
+function closeM(id) { document.getElementById(id).classList.remove('open'); }
+document.querySelectorAll('.ov').forEach(el =>
+  el.addEventListener('click', e => { if(e.target===el) el.classList.remove('open'); })
+);
+
+// ── LOAD CATEGORIES + STATS ────────────────────────────────
+async function loadCategoriesAndStats() {
+  try {
+    const [catRes, statsRes] = await Promise.all([
+      apiGet({ action:'getCategories' }),
+      apiGet({ action:'getStats' })
+    ]);
+
+    if (catRes.ok && catRes.categories) {
+      allCategories = catRes.categories;
+      buildDropdown(catRes.categories);
+      buildChips(catRes.categories, statsRes.cats || {});
+      document.getElementById('s-cats').textContent = catRes.categories.length + '+';
+    }
+    if (statsRes.ok) {
+      document.getElementById('s-vend').textContent  = (statsRes.vendors || 0) + '+';
+      document.getElementById('s-users').textContent = (statsRes.users   || 0) + '+';
+    }
+  } catch(e) {}
+}
+
+function buildDropdown(cats) {
+  const sel  = document.getElementById('s-cat');
+  const first = sel.options[0];
+  sel.innerHTML = '';
+  sel.appendChild(first);
+  cats.forEach(c => {
+    const opt    = document.createElement('option');
+    opt.value    = c.name;
+    opt.textContent = c.icon + ' ' + c.name;
+    sel.appendChild(opt);
+  });
+  if (currentCat) sel.value = currentCat;
+  // Set industry if passed via URL
+  const indSel = document.getElementById('s-industry');
+  if (indSel && currentIndustry) indSel.value = currentIndustry;
+}
+
+function buildChips(cats, counts) {
+  const wrap = document.getElementById('chips-wrap');
+  wrap.innerHTML = `<div class="chip${!currentCat?' active':''}" onclick="filterChip('',this)">🏪 All</div>`;
+  cats.forEach(c => {
+    const count = counts[c.name] || 0;
+    wrap.insertAdjacentHTML('beforeend',
+      `<div class="chip${currentCat===c.name?' active':''}" onclick="filterChip('${esc(c.name)}',this)">
+        ${c.icon} ${esc(c.name)} ${count?`<span style="font-size:10px;opacity:.7;">(${count})</span>`:''}
+      </div>`
+    );
+  });
+}
+
+// ── FILTER BY CHIP ─────────────────────────────────────────
+function filterChip(val, el, type) {
+  if (type === 'industry') {
+    currentIndustry = val; currentCat = '';
+    var sc = document.getElementById('s-cat');
+    if (sc) sc.value = '';
+    var si = document.getElementById('s-industry');
+    if (si) si.value = val;
+  } else {
+    currentCat = val; currentIndustry = '';
+    var sc = document.getElementById('s-cat');
+    if (sc) sc.value = val;
+    var si = document.getElementById('s-industry');
+    if (si) si.value = '';
+  }
+  document.querySelectorAll('.chip').forEach(function(c) { c.classList.remove('active'); });
+  el.classList.add('active');
+  loadVendors(true);
+  updateGridTitle();
+}
+
+// ── SEARCH ─────────────────────────────────────────────────
+function doSearch() {
+  currentSearch   = document.getElementById('s-input').value.trim();
+  currentCat      = document.getElementById('s-cat').value;
+  currentIndustry = (document.getElementById('s-industry') || {}).value || '';
+  currentSort     = document.getElementById('s-sort').value;
+  document.querySelectorAll('.chip').forEach(function(ch) { ch.classList.remove('active'); });
+  var allChip = document.querySelector('.chip');
+  if (!currentCat && !currentIndustry && allChip) allChip.classList.add('active');
+  loadVendors(true);
+  updateGridTitle();
+}
+
+function updateGridTitle() {
+  var title  = document.getElementById('grid-title');
+  if (!title) return;
+  var filter = currentCat || currentIndustry;
+  if (currentSearch && filter)  title.textContent = '"' + currentSearch + '" in ' + filter;
+  else if (currentSearch)       title.textContent = 'Results for "' + currentSearch + '"';
+  else if (currentIndustry)     title.textContent = currentIndustry;
+  else if (currentCat)          title.textContent = currentCat;
+  else                          title.textContent = 'All Businesses';
+}
+
+// ── LOAD VENDORS ───────────────────────────────────────────
+async function loadVendors(reset) {
+  if (reset) {
+    offset = 0;
+    document.getElementById('biz-grid').innerHTML = '<div class="spin"></div>';
+    document.getElementById('load-more-wrap').style.display = 'none';
+  }
+  try {
+    const res = await apiGet({
+      action:   'getVendors',
+      search:   currentSearch,
+      category: currentCat,
+      industry: currentIndustry || '',
+      limit:    LIMIT,
+      offset:   offset
+    });
+
+    const grid = document.getElementById('biz-grid');
+    if (reset) grid.innerHTML = '';
+
+    if (!res.vendors || (!res.vendors.length && offset===0)) {
+      grid.innerHTML = `<div class="empty" style="grid-column:1/-1">
+        <div class="ei">🏪</div>
+        <p style="margin-bottom:14px;">No businesses found${currentSearch ? ` for "${currentSearch}"` : ''}${currentCat ? ` in ${currentCat}` : ''}.</p>
+        ${currentSearch||currentCat ? `<button class="btn btn-p btn-sm" onclick="clearFilters()">Clear Filters</button>` : ''}
+      </div>`;
+      document.getElementById('result-count').textContent = '';
+      return;
+    }
+
+    // Sort client-side if needed
+    let vendors = res.vendors;
+    if (currentSort === 'rating') {
+      vendors = [...vendors].sort((a,b) => parseFloat(b.rating||0) - parseFloat(a.rating||0));
+    } else if (currentSort === 'name') {
+      vendors = [...vendors].sort((a,b) => a.businessName.localeCompare(b.businessName));
+    }
+
+    vendors.forEach(v => {
+      _vendorMap[v.id] = v;
+      grid.insertAdjacentHTML('beforeend', bizCard(v));
+    });
+
+    offset += vendors.length;
+    const total = res.total || 0;
+    document.getElementById('result-count').textContent = total + ' businesses';
+    document.getElementById('load-more-wrap').style.display = offset < total ? 'block' : 'none';
+  } catch(e) {
+    document.getElementById('biz-grid').innerHTML = `<div class="empty" style="grid-column:1/-1">
+      <div class="ei">⚠️</div><p>Could not load businesses. Please try again.</p>
+    </div>`;
+  }
+}
+
+function loadMore() { loadVendors(false); }
+
+function clearFilters() {
+  currentSearch = ''; currentCat = '';
+  document.getElementById('s-input').value = '';
+  var sc = document.getElementById('s-cat'); if(sc) sc.value = '';
+  var si = document.getElementById('s-industry'); if(si) si.value = '';
+  currentSearch = ''; currentCat = ''; currentIndustry = '';
+  document.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+  document.querySelector('.chip')?.classList.add('active');
+  loadVendors(true);
+  updateGridTitle();
+}
+
+// ── BUSINESS CARD ──────────────────────────────────────────
+function bizCard(v) {
+  const color    = BIZ_COLORS[v.businessName.charCodeAt(0) % BIZ_COLORS.length];
+  const initials = v.businessName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const badge    = v.plan==='Premium'
+    ? '<span class="bbadge bbadge-p">⭐ Premium</span>'
+    : (v.plan==='Pro' ? '<span class="bbadge bbadge-v">Pro</span>' : '<span class="bbadge bbadge-v">Verified</span>');
+  const rating   = v.rating && parseFloat(v.rating)>0 ? parseFloat(v.rating).toFixed(1) : null;
+  const starsHtml= rating ? `<span class="stars">${'★'.repeat(Math.min(5,Math.round(parseFloat(rating))))}</span><span>${rating}</span>` : '';
+  const revCount = parseInt(v.reviewCount)||0;
+
+  return `<div class="bcard" onclick="showBizDetail('${v.id}')">
+    <div class="bcard-hd">
+      <div class="bava" style="background:${color}">${initials}</div>
+      <div><div class="bnm">${esc(v.businessName)}</div><div class="bcat">${esc(v.category)}</div></div>
+      ${badge}
+    </div>
+    <div class="bcard-bd">
+      <div class="bdesc">${esc(v.description)}</div>
+      <div class="bmeta">
+        ${starsHtml}
+        ${revCount>0?`<span>💬 ${revCount} review${revCount>1?'s':''}</span>`:''}
+        <span>📍 ${esc(v.city)}</span>
+        ${v.timing?`<span>🕐 ${esc(v.timing)}</span>`:''}
+      </div>
+    </div>
+    <div class="bcard-ft">
+      <button class="bbtn bbtn-p" onclick="event.stopPropagation();callBiz('${esc(v.phone||'')}')">📞 Call</button>
+      ${v.whatsapp && !String(v.whatsapp).includes('ERROR')
+        ? `<button class="bbtn bbtn-s" onclick="event.stopPropagation();waBiz('${esc(v.whatsapp)}','${esc(v.businessName)}')">💬 WhatsApp</button>`
+        : `<button class="bbtn bbtn-s" onclick="event.stopPropagation();showBizDetail('${v.id}')">👁 View Profile</button>`}
+    </div>
+  </div>`;
+}
+
+function callBiz(ph) {
+  if (!ph) { showToast('Phone number not available', true); return; }
+  window.open('tel:' + ph.replace(/\s/g,''));
+}
+function waBiz(ph, nm) {
+  if (!ph || String(ph).includes('ERROR')) { showToast('WhatsApp number not available', true); return; }
+  const clean = String(ph).replace(/\D/g,'');
+  window.open(`https://wa.me/${clean}?text=Hi%20${encodeURIComponent(nm)}%2C%20I%20found%20you%20on%20ACCI%20Jabalpur.`);
+}
+
+// ── BUSINESS DETAIL ────────────────────────────────────────
+function showBizDetail(id) {
+  const v = _vendorMap[id];
+  if (!v) return;
+  document.getElementById('biz-d-nm').textContent = v.businessName;
+  const color    = BIZ_COLORS[v.businessName.charCodeAt(0) % BIZ_COLORS.length];
+  const initials = v.businessName.split(' ').map(w=>w[0]).join('').slice(0,2).toUpperCase();
+  const rating   = v.rating && parseFloat(v.rating)>0 ? parseFloat(v.rating).toFixed(1) : null;
+  const starsHtml= rating
+    ? `<span style="color:#f59e0b;font-size:18px;">${'★'.repeat(Math.min(5,Math.round(parseFloat(rating))))}</span> <strong>${rating}</strong> <span style="color:var(--g400);font-size:12px;">(${parseInt(v.reviewCount)||0} reviews)</span>`
+    : '<span style="color:var(--g400);font-size:12px;">No reviews yet</span>';
+
+  const photos = v.workPhotos ? String(v.workPhotos).split(',').map(s=>s.trim()).filter(Boolean) : [];
+  const photosHtml = photos.length
+    ? `<div style="margin-bottom:16px;">
+        <div style="font-size:13px;font-weight:700;color:var(--navy);margin-bottom:8px;">📸 Work Photos</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;">${photos.map(url=>`<img src="${url}" style="width:90px;height:70px;object-fit:cover;border-radius:8px;cursor:pointer;" onclick="window.open('${url}','_blank')" onerror="this.style.display='none'">`).join('')}</div>
+      </div>` : '';
+
+  document.getElementById('biz-d-body').innerHTML = `
+    <div style="display:flex;align-items:center;gap:14px;margin-bottom:14px;">
+      <div style="width:56px;height:56px;border-radius:10px;background:${color};display:flex;align-items:center;justify-content:center;font-family:'Playfair Display',serif;font-size:22px;font-weight:700;color:#fff;flex-shrink:0;">${initials}</div>
+      <div>
+        <div style="font-size:16px;font-weight:600;color:var(--navy);">${esc(v.businessName)}</div>
+        <div style="font-size:13px;color:var(--royal);margin-top:2px;">${esc(v.category)}</div>
+        <div style="margin-top:5px;">${starsHtml}</div>
+      </div>
+    </div>
+    <div style="background:var(--g50);border-radius:8px;padding:13px;margin-bottom:14px;font-size:13.5px;color:var(--g700);line-height:1.7;">${esc(v.description)}</div>
+    ${photosHtml}
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;font-size:13px;color:var(--g700);margin-bottom:16px;">
+      ${v.phone?`<div><strong>📞 Phone</strong><br><a href="tel:${v.phone}" style="color:var(--royal);">${esc(v.phone)}</a></div>`:''}
+      ${v.whatsapp&&!String(v.whatsapp).includes('ERROR')?`<div><strong>💬 WhatsApp</strong><br><a href="https://wa.me/${String(v.whatsapp).replace(/\D/g,'')}" style="color:var(--green);">${esc(v.whatsapp)}</a></div>`:''}
+      ${v.email?`<div><strong>✉️ Email</strong><br><a href="mailto:${v.email}" style="color:var(--royal);">${esc(v.email)}</a></div>`:''}
+      ${v.website?`<div><strong>🌐 Website</strong><br><a href="${v.website}" target="_blank" style="color:var(--royal);">${esc(v.website)}</a></div>`:''}
+      ${v.address?`<div style="grid-column:1/-1"><strong>📍 Address</strong><br>${esc(v.address)}, ${esc(v.city)}</div>`:''}
+      ${v.timing?`<div><strong>🕐 Timing</strong><br>${esc(v.timing)}</div>`:''}
+      ${v.estYear?`<div><strong>📅 Est.</strong><br>${esc(v.estYear)}</div>`:''}
+      ${v.employees?`<div><strong>👥 Team</strong><br>${esc(v.employees)} employees</div>`:''}
+    </div>
+    <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:20px;">
+      ${v.phone?`<a href="tel:${v.phone}" class="btn btn-p">📞 Call Now</a>`:''}
+      ${v.whatsapp&&!String(v.whatsapp).includes('ERROR')?`<a href="https://wa.me/${String(v.whatsapp).replace(/\D/g,'')}" target="_blank" class="btn btn-gold">💬 WhatsApp</a>`:''}
+    </div>
+    <div style="border-top:1px solid var(--g200);padding-top:16px;">
+      <div style="font-size:14px;font-weight:700;color:var(--navy);margin-bottom:12px;">⭐ Reviews & Ratings</div>
+      <div id="biz-reviews-wrap"><div class="spin" style="width:22px;height:22px;border-width:2px;margin:10px auto;"></div></div>
+      <div style="margin-top:14px;background:var(--pale);border-radius:12px;padding:16px;">
+        <div style="font-size:13px;font-weight:600;color:var(--navy);margin-bottom:10px;">Write a Review</div>
+        <div style="display:flex;gap:6px;margin-bottom:10px;">
+          ${[1,2,3,4,5].map(n=>`<span onclick="pickStar(${n},'${v.id}')" style="font-size:24px;cursor:pointer;color:var(--g300);transition:color .15s;" id="str-${v.id}-${n}">★</span>`).join('')}
+        </div>
+        <input class="fi" id="rev-name-${v.id}" placeholder="Your Name" style="margin-bottom:8px;">
+        <textarea class="fi" id="rev-text-${v.id}" rows="2" placeholder="Share your experience with this business…" style="margin-bottom:8px;"></textarea>
+        <button class="btn btn-p btn-sm" onclick="submitReview('${v.id}','${esc(v.businessName)}')">Post Review</button>
+      </div>
+    </div>`;
+
+  openM('m-biz');
+  loadBizReviews(v.id);
+  _currentReviewStars = 0;
+  _currentReviewVendorId = v.id;
+}
+
+let _currentReviewStars = 0;
+let _currentReviewVendorId = null;
+
+function pickStar(n, vid) {
+  _currentReviewStars = n;
+  [1,2,3,4,5].forEach(i => {
+    const el = document.getElementById(`str-${vid}-${i}`);
+    if(el) el.style.color = i<=n ? '#f59e0b' : 'var(--g300)';
+  });
+}
+
+async function loadBizReviews(vendorId) {
+  const wrap = document.getElementById('biz-reviews-wrap');
+  if (!wrap) return;
+  wrap.innerHTML = '<div class="spin" style="width:20px;height:20px;border-width:2px;margin:10px auto;"></div>';
+  try {
+    const res = await apiGet({ action:'getReviews', vendorId: String(vendorId).trim() });
+    if (!res.ok || !res.reviews || !res.reviews.length) {
+      wrap.innerHTML = '<p style="font-size:13px;color:var(--g400);padding:8px 0;">No reviews yet. Be the first to review!</p>';
+      return;
+    }
+    wrap.innerHTML = res.reviews.map(r => {
+      const stars  = Math.min(5, parseInt(r.rating)||0);
+      const name   = r.name   || 'Anonymous';
+      const text   = r.text   || '';
+      const date   = r.date   || '';
+      const dateStr= date ? new Date(date).toLocaleDateString('en-IN',{day:'numeric',month:'short',year:'numeric'}) : '';
+      return `<div style="padding:12px 0;border-bottom:1px solid var(--g100);">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:5px;">
+          <strong style="font-size:13px;color:var(--navy);">${esc(name)}</strong>
+          <span style="color:#f59e0b;font-size:16px;letter-spacing:2px;">${'★'.repeat(stars)}${'☆'.repeat(5-stars)}</span>
+        </div>
+        <p style="font-size:13.5px;color:var(--g700);line-height:1.65;margin-bottom:5px;">${esc(text)}</p>
+        ${dateStr?`<span style="font-size:11px;color:var(--g400);">${dateStr}</span>`:''}
+      </div>`;
+    }).join('');
+  } catch(e) {
+    if(wrap) wrap.innerHTML = '<p style="font-size:12px;color:var(--g400);">Could not load reviews.</p>';
+  }
+}
+
+async function submitReview(vendorId, bizName) {
+  const name  = document.getElementById(`rev-name-${vendorId}`)?.value?.trim();
+  const text  = document.getElementById(`rev-text-${vendorId}`)?.value?.trim();
+  const stars = _currentReviewStars;
+  if (!name)  { showToast('Please enter your name', true); return; }
+  if (!stars) { showToast('Please select a star rating', true); return; }
+  if (!text)  { showToast('Please write a review', true); return; }
+  try {
+    const res = await apiPost({ action:'addReview', vendorId, bizName, name, text, rating: stars, date: new Date().toISOString() });
+    if (res.ok) {
+      showToast('✅ Review submitted! It will appear after approval.');
+      loadBizReviews(vendorId);
+      if(document.getElementById(`rev-name-${vendorId}`)) document.getElementById(`rev-name-${vendorId}`).value = '';
+      if(document.getElementById(`rev-text-${vendorId}`)) document.getElementById(`rev-text-${vendorId}`).value = '';
+      _currentReviewStars = 0;
+      [1,2,3,4,5].forEach(i => { const el = document.getElementById(`str-${vendorId}-${i}`); if(el) el.style.color='var(--g300)'; });
+    } else showToast(res.msg||'Error submitting review', true);
+  } catch(e) { showToast('Connection error', true); }
+}
+
+// ── LIST BUSINESS ──────────────────────────────────────────
+function handleListBusiness() {
+  if (!currentUser) {
+    openM('m-reg-prompt');
+    return;
+  }
+  // Redirect to index.html and open vendor modal
+  sessionStorage.setItem('openVendor','1');
+  window.location.href = 'index.html';
+}
+
+// ── UTILS ──────────────────────────────────────────────────
+function esc(str) {
+  return String(str||'').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+</script>
+</body>
+</html>

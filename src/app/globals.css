@@ -1,0 +1,73 @@
+@import "tailwindcss";
+
+:root {
+  --navy: #07174a;
+  --navy-dark: #030c27;
+  --navy-light: #0f2468;
+  --royal: #1540a8;
+  --blue: #1a56db;
+  --gold: #d4af37;
+  --gold-warm: #b45309;
+  --gold-light: #fef3c7;
+  --saffron: #c25e1a;
+  --emerald: #166534;
+  --emerald-light: #dcfce7;
+  --sand: #faf8f5;
+  --sand-dark: #f0ebe1;
+  --border-subtle: #e5e7eb;
+}
+
+@theme {
+  --color-navy: var(--navy);
+  --color-navy-dark: var(--navy-dark);
+  --color-navy-light: var(--navy-light);
+  --color-royal: var(--royal);
+  --color-gold: var(--gold);
+  --color-gold-warm: var(--gold-warm);
+  --color-gold-light: var(--gold-light);
+  --color-saffron: var(--saffron);
+  --color-emerald: var(--emerald);
+  --color-emerald-light: var(--emerald-light);
+  --color-sand: var(--sand);
+  --color-sand-dark: var(--sand-dark);
+}
+
+body {
+  background-color: #ffffff;
+  color: #1e293b;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  overflow-x: hidden;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Subtle Indian architectural jali lattice border */
+.jali-border-bottom {
+  background-image: radial-gradient(circle at 10px 10px, rgba(212, 175, 55, 0.25) 2px, transparent 2px);
+  background-size: 20px 20px;
+}
+
+.jali-pattern-overlay {
+  background-image: radial-gradient(rgba(255, 255, 255, 0.05) 1.5px, transparent 1.5px);
+  background-size: 18px 18px;
+}
+
+/* Regal Heading Styles */
+.font-serif-heading {
+  font-family: "Playfair Display", Georgia, Cambria, "Times New Roman", Times, serif;
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: #f1f5f9;
+}
+::-webkit-scrollbar-thumb {
+  background: #1540a8;
+  border-radius: 4px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: #07174a;
+}
