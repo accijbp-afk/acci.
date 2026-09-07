@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { inquiriesService } from '@/services/appwrite/inquiries';
-import { MapPin, Phone, Mail, Clock, Send, CheckCircle2 } from 'lucide-react';
+import { Phone, Mail, CheckCircle2 } from 'lucide-react';
 
 export default function ContactPage() {
   const [submitting, setSubmitting] = useState(false);
@@ -40,39 +40,31 @@ export default function ContactPage() {
       {/* Header */}
       <section className="bg-[#07174a] text-white py-14 border-b-4 border-amber-400">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <span className="text-xs font-bold uppercase tracking-widest text-amber-400">
-            Chamber Secretariat & Help Desk
+          <span className="text-xs font-bold uppercase tracking-widest text-amber-400 block mb-1">
+            Help Desk
           </span>
-          <h1 className="font-serif-heading text-3xl sm:text-5xl font-bold text-white mt-1">
-            Contact Agrawal Committee
+          <h1 className="font-serif-heading text-3xl sm:text-5xl font-bold text-white">
+            Contact ACCI
           </h1>
           <p className="mt-2 text-xs sm:text-sm text-slate-300 max-w-2xl">
-            Reach out to the Agrawal Chamber of Commerce & Industries (ACCI) Jabalpur for membership verification, delegation passes, trade disputes, or commercial partnerships.
+            Reach out to the Agrawal Chamber of Commerce &amp; Industries (ACCI) Jabalpur for membership verification, Events or commercial and non commercial partnerships.
           </p>
         </div>
       </section>
 
       <div className="mx-auto max-w-7xl px-4 sm:px-6 mt-12">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 items-start">
-          {/* Secretariat Details */}
+          {/* Contact Details */}
           <div className="lg:col-span-5 space-y-6">
             <div className="rounded-2xl border border-slate-200 bg-white p-7 shadow-sm">
               <h2 className="font-serif-heading text-xl font-bold text-[#07174a] mb-4">
-                Chamber Secretariat Office
+                Contact us at
               </h2>
               <div className="space-y-4 text-xs text-slate-600">
                 <div className="flex items-start gap-3">
-                  <MapPin className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="block text-slate-800 text-sm font-semibold">Registered Office</strong>
-                    <span>ACCI Secretariat, Civic Centre & Napier Town, Jabalpur, Madhya Pradesh – 482001</span>
-                  </div>
-                </div>
-
-                <div className="flex items-start gap-3">
                   <Phone className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="block text-slate-800 text-sm font-semibold">Telephone & WhatsApp</strong>
+                    <strong className="block text-slate-800 text-sm font-semibold">Telephone &amp; WhatsApp</strong>
                     <a href="tel:+918319565363" className="text-blue-700 font-bold block">+91 8319565363</a>
                     <span className="text-[11px] text-slate-400">Monday to Saturday (10:00 AM – 06:30 PM)</span>
                   </div>
@@ -81,31 +73,13 @@ export default function ContactPage() {
                 <div className="flex items-start gap-3">
                   <Mail className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
                   <div>
-                    <strong className="block text-slate-800 text-sm font-semibold">Official Email</strong>
-                    <a href="mailto:accijabalpur@gmail.com" className="text-blue-700 font-medium block">
-                      accijabalpur@gmail.com
+                    <strong className="block text-slate-800 text-sm font-semibold">Email</strong>
+                    <a href="mailto:accijbp@gmail.com" className="text-blue-700 font-medium block">
+                      accijbp@gmail.com
                     </a>
                   </div>
                 </div>
-
-                <div className="flex items-start gap-3">
-                  <Clock className="h-5 w-5 text-amber-500 shrink-0 mt-0.5" />
-                  <div>
-                    <strong className="block text-slate-800 text-sm font-semibold">Public Consultation Hours</strong>
-                    <span>Wednesdays & Saturdays: 04:00 PM – 07:00 PM</span>
-                  </div>
-                </div>
               </div>
-            </div>
-
-            {/* Advisory Assistance Box */}
-            <div className="rounded-2xl border border-amber-300 bg-amber-50/60 p-6">
-              <h3 className="font-serif-heading text-sm font-bold text-amber-900 mb-2">
-                Need Priority Assistance?
-              </h3>
-              <p className="text-xs text-amber-800 leading-relaxed">
-                If you have an urgent GST notice, industrial lease query, or commercial trade dispute requiring Chamber mediation, you may WhatsApp our Secretariat directly at <strong>+91 8319565363</strong>.
-              </p>
             </div>
           </div>
 
@@ -113,7 +87,7 @@ export default function ContactPage() {
           <div className="lg:col-span-7">
             <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-sm">
               <h2 className="font-serif-heading text-xl font-bold text-[#07174a]">
-                Send a Message to the Secretariat
+                Send us a message
               </h2>
               <p className="text-xs text-slate-500 mt-1 mb-6">
                 All submissions are delivered directly to the Chamber administrative office.
@@ -205,10 +179,9 @@ export default function ContactPage() {
                   <button
                     type="submit"
                     disabled={submitting}
-                    className="inline-flex items-center justify-center gap-2 rounded-lg bg-[#1540a8] hover:bg-[#07174a] text-white py-3 px-6 text-xs font-bold transition-all shadow cursor-pointer disabled:opacity-50"
+                    className="inline-flex items-center justify-center rounded-lg bg-[#1540a8] hover:bg-[#07174a] text-white py-3 px-8 text-xs font-bold transition-all shadow cursor-pointer disabled:opacity-50"
                   >
-                    <Send className="h-4 w-4" />
-                    <span>{submitting ? 'Sending Message…' : 'Submit to Secretariat'}</span>
+                    <span>{submitting ? 'Submitting…' : 'Submit'}</span>
                   </button>
                 </form>
               )}

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { authService } from '@/services/appwrite/auth';
 import { membersService } from '@/services/appwrite/members';
 import { eventsService } from '@/services/appwrite/events';
+import { galleryService } from '@/services/appwrite/gallery';
 import { newsService } from '@/services/appwrite/news';
 import { jobsService } from '@/services/appwrite/jobs';
 import { inquiriesService } from '@/services/appwrite/inquiries';
@@ -13,6 +14,7 @@ import {
   UserProfile,
   MemberBusiness,
   ChamberEvent,
+  GalleryAlbum,
   ChamberNews,
   JobListing,
   ContactSubmission,
@@ -23,6 +25,7 @@ import {
   Building2,
   Users,
   Calendar,
+  Images,
   Newspaper,
   Briefcase,
   Mail,
@@ -35,18 +38,20 @@ import {
   LogOut,
   ExternalLink,
   Search,
+  Eye,
 } from 'lucide-react';
 
 export default function AdminDashboard() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'vendors' | 'events' | 'news' | 'jobs' | 'inquiries' | 'reviews'
+    'overview' | 'vendors' | 'events' | 'gallery' | 'news' | 'jobs' | 'inquiries' | 'reviews'
   >('overview');
 
   // Data states
   const [vendors, setVendors] = useState<MemberBusiness[]>([]);
   const [events, setEvents] = useState<ChamberEvent[]>([]);
+  const [albums, setAlbums] = useState<GalleryAlbum[]>([]);
   const [news, setNews] = useState<ChamberNews[]>([]);
   const [jobs, setJobs] = useState<JobListing[]>([]);
   const [inquiries, setInquiries] = useState<ContactSubmission[]>([]);
@@ -64,6 +69,19 @@ export default function AdminDashboard() {
     description: '',
   });
 
+  // Gallery Album Form State
+  const [showAddAlbumModal, setShowAddAlbumModal] = useState(false);
+  const [newAlbum, setNewAlbum] = useState({
+    title: '',
+    category: 'Trade Summit',
+    date: '18 Oct 2026',
+    venue: 'Hotel Satkar Grand, Jabalpur',
+    coverUrl: '',
+    description: '',
+    photosText: '',
+  });
+  const [previewAlbum, setPreviewAlbum] = useState<GalleryAlbum | null>(null);
+
   // New News Form State
   const [showAddNewsModal, setShowAddNewsModal] = useState(false);
   const [newArticle, setNewArticle] = useState({
@@ -76,13 +94,14 @@ export default function AdminDashboard() {
 
   const loadAllData = async () => {
     setLoading(true);
-    const [vRes, evRes, nRes, jRes, inqRes, revRes] = await Promise.all([
+    const [vRes, evRes, nRes, jRes, inqRes, revRes, galRes] = await Promise.all([
       membersService.getMembers({ status: 'all' }),
       eventsService.getEvents(),
       newsService.getNews(),
       jobsService.getJobs(),
       inquiriesService.getInquiries(),
       membersService.getAllReviewsAdmin(),
+      galleryService.getAlbums(),
     ]);
 
     setVendors(vRes.members);
@@ -91,6 +110,7 @@ export default function AdminDashboard() {
     setJobs(jRes);
     setInquiries(inqRes);
     setReviews(revRes);
+    setAlbums(galRes);
     setLoading(false);
   };
 
@@ -139,6 +159,45 @@ export default function AdminDashboard() {
   const handleDeleteEvent = async (id: string) => {
     if (confirm('Delete this event?')) {
       await eventsService.deleteEvent(id);
+      loadAllData();
+    }
+  };
+
+  const handleCreateAlbum = async (e: React.FormEvent) => {
+    e.preventDefault();
+    const photos = newAlbum.photosText
+      ? newAlbum.photosText
+          .split(/[\n,]+/)
+          .map((s) => s.trim())
+          .filter(Boolean)
+      : [newAlbum.coverUrl];
+
+    await galleryService.createAlbum({
+      title: newAlbum.title,
+      category: newAlbum.category,
+      date: newAlbum.date || '2026',
+      venue: newAlbum.venue,
+      coverUrl: newAlbum.coverUrl,
+      description: newAlbum.description,
+      photos: photos.length > 0 ? photos : [newAlbum.coverUrl],
+    });
+
+    setShowAddAlbumModal(false);
+    setNewAlbum({
+      title: '',
+      category: 'Trade Summit',
+      date: '18 Oct 2026',
+      venue: 'Hotel Satkar Grand, Jabalpur',
+      coverUrl: '',
+      description: '',
+      photosText: '',
+    });
+    loadAllData();
+  };
+
+  const handleDeleteAlbum = async (id: string) => {
+    if (confirm('Delete this concluded event album from gallery?')) {
+      await galleryService.deleteAlbum(id);
       loadAllData();
     }
   };
@@ -237,6 +296,7 @@ export default function AdminDashboard() {
             { id: 'overview', label: 'Overview', icon: Building2 },
             { id: 'vendors', label: `Enterprises (${vendors.length})`, icon: Users },
             { id: 'events', label: `Events (${events.length})`, icon: Calendar },
+            { id: 'gallery', label: `Gallery (${albums.length})`, icon: Images },
             { id: 'news', label: `Circulars (${news.length})`, icon: Newspaper },
             { id: 'jobs', label: `Jobs (${jobs.length})`, icon: Briefcase },
             { id: 'inquiries', label: `Inquiries (${inquiries.length})`, icon: Mail },
@@ -507,6 +567,96 @@ export default function AdminDashboard() {
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* TAB: GALLERY & EVENT PHOTO ARCHIVES */}
+        {activeTab === 'gallery' && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-slate-200 mb-6 gap-3">
+              <div>
+                <h2 className="font-serif-heading text-lg font-bold text-[#07174a]">
+                  Concluded Events &amp; Photo Gallery
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Manage photo albums and concluded event photo archives displayed on the public gallery page.
+                </p>
+              </div>
+              <button
+                onClick={() => setShowAddAlbumModal(true)}
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#1540a8] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#07174a] cursor-pointer shrink-0"
+              >
+                <PlusCircle className="h-4 w-4" />
+                <span>+ Add Concluded Event Album</span>
+              </button>
+            </div>
+
+            {albums.length === 0 ? (
+              <div className="p-12 text-center text-xs text-slate-500">
+                No event albums created yet. Click above to add your first concluded event album.
+              </div>
+            ) : (
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {albums.map((album) => (
+                  <div
+                    key={album.id}
+                    className="rounded-2xl border border-slate-200 overflow-hidden flex flex-col justify-between shadow-xs hover:shadow-md transition-shadow"
+                  >
+                    <div className="p-5 flex gap-4">
+                      <div className="relative h-24 w-28 shrink-0 rounded-xl overflow-hidden bg-slate-100 border border-slate-200">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={album.coverUrl}
+                          alt={album.title}
+                          className="h-full w-full object-cover"
+                        />
+                        <div className="absolute bottom-1 right-1 rounded bg-black/75 px-1.5 py-0.5 text-[9px] font-bold text-white">
+                          {album.photos?.length || album.photoCount || 1} photos
+                        </div>
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100">
+                            {album.category}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-medium">
+                            {album.date}
+                          </span>
+                        </div>
+                        <h3 className="font-serif-heading font-bold text-sm text-[#07174a] line-clamp-1">
+                          {album.title}
+                        </h3>
+                        {album.venue && (
+                          <p className="text-[11px] text-slate-500 line-clamp-1 mt-0.5">
+                            📍 {album.venue}
+                          </p>
+                        )}
+                        <p className="text-xs text-slate-600 line-clamp-2 mt-1.5">
+                          {album.description}
+                        </p>
+                      </div>
+                    </div>
+
+                    <div className="bg-slate-50 px-5 py-3 border-t border-slate-100 flex items-center justify-between">
+                      <button
+                        onClick={() => setPreviewAlbum(album)}
+                        className="inline-flex items-center gap-1.5 text-xs font-bold text-[#1540a8] hover:text-[#07174a] cursor-pointer"
+                      >
+                        <Eye className="h-3.5 w-3.5" />
+                        <span>View Photos ({album.photos?.length || album.photoCount || 1})</span>
+                      </button>
+                      <button
+                        onClick={() => handleDeleteAlbum(album.id)}
+                        className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-800 cursor-pointer"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -819,6 +969,178 @@ export default function AdminDashboard() {
                 Publish Official Circular
               </button>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Add Concluded Event Gallery Album */}
+      {showAddAlbumModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setShowAddAlbumModal(false)}
+              className="absolute right-4 top-4 rounded-full p-2 text-slate-400 hover:bg-slate-100 cursor-pointer"
+            >
+              ✕
+            </button>
+            <h3 className="font-serif-heading text-xl font-bold text-[#07174a]">
+              Add Concluded Event to Gallery
+            </h3>
+            <p className="text-xs text-slate-500 mt-0.5">
+              Create a dedicated photo gallery section for this concluded event.
+            </p>
+
+            <form onSubmit={handleCreateAlbum} className="mt-4 space-y-3 text-xs">
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Event Title *</label>
+                <input
+                  type="text"
+                  required
+                  value={newAlbum.title}
+                  onChange={(e) => setNewAlbum({ ...newAlbum, title: e.target.value })}
+                  placeholder="e.g. Annual Agrawal MSME Industrial Summit"
+                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800"
+                />
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Category</label>
+                  <select
+                    value={newAlbum.category}
+                    onChange={(e) => setNewAlbum({ ...newAlbum, category: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800"
+                  >
+                    <option value="Trade Summit">Trade Summit</option>
+                    <option value="Cultural & Trade">Cultural &amp; Trade</option>
+                    <option value="Policy Delegation">Policy Delegation</option>
+                    <option value="Youth Wing">Youth Wing</option>
+                    <option value="Exhibition & Expo">Exhibition &amp; Expo</option>
+                    <option value="Award Ceremony">Award Ceremony</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Event Date</label>
+                  <input
+                    type="text"
+                    value={newAlbum.date}
+                    onChange={(e) => setNewAlbum({ ...newAlbum, date: e.target.value })}
+                    placeholder="e.g. 18 Oct 2026"
+                    className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Venue</label>
+                <input
+                  type="text"
+                  value={newAlbum.venue}
+                  onChange={(e) => setNewAlbum({ ...newAlbum, venue: e.target.value })}
+                  placeholder="e.g. Hotel Satkar Grand, Jabalpur"
+                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Cover Image URL *</label>
+                <input
+                  type="url"
+                  required
+                  value={newAlbum.coverUrl}
+                  onChange={(e) => setNewAlbum({ ...newAlbum, coverUrl: e.target.value })}
+                  placeholder="https://images.unsplash.com/... or /images/..."
+                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Description *</label>
+                <textarea
+                  required
+                  rows={3}
+                  value={newAlbum.description}
+                  onChange={(e) => setNewAlbum({ ...newAlbum, description: e.target.value })}
+                  placeholder="Summary of what happened at this event, key dignitaries present, announcements made…"
+                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">
+                  Event Photo URLs (one per line or comma separated)
+                </label>
+                <textarea
+                  rows={4}
+                  value={newAlbum.photosText}
+                  onChange={(e) => setNewAlbum({ ...newAlbum, photosText: e.target.value })}
+                  placeholder="https://images.unsplash.com/photo-1&#10;https://images.unsplash.com/photo-2&#10;https://images.unsplash.com/photo-3"
+                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 font-mono"
+                />
+                <span className="text-[10px] text-slate-400">
+                  If empty, the cover image will be used as the first photo in the gallery.
+                </span>
+              </div>
+
+              <button
+                type="submit"
+                className="w-full rounded-lg bg-[#1540a8] py-2.5 text-xs font-bold text-white hover:bg-[#07174a] cursor-pointer mt-2"
+              >
+                Save Event to Gallery
+              </button>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Preview Event Photos */}
+      {previewAlbum && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4 backdrop-blur-xs">
+          <div className="relative w-full max-w-3xl rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 max-h-[85vh] flex flex-col">
+            <div className="flex items-center justify-between pb-3 border-b border-slate-200">
+              <div>
+                <h3 className="font-serif-heading text-lg font-bold text-[#07174a]">
+                  {previewAlbum.title}
+                </h3>
+                <span className="text-xs text-slate-500">
+                  {previewAlbum.photos?.length || 1} pictures in album
+                </span>
+              </div>
+              <button
+                onClick={() => setPreviewAlbum(null)}
+                className="rounded-full p-2 text-slate-400 hover:bg-slate-100 cursor-pointer"
+              >
+                ✕
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto mt-4 grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {(previewAlbum.photos && previewAlbum.photos.length > 0
+                ? previewAlbum.photos
+                : [previewAlbum.coverUrl]
+              ).map((src, i) => (
+                <div
+                  key={i}
+                  className="relative h-36 rounded-xl overflow-hidden bg-slate-100 border border-slate-200"
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    src={src}
+                    alt={`Photo ${i + 1}`}
+                    className="h-full w-full object-cover"
+                  />
+                </div>
+              ))}
+            </div>
+
+            <div className="pt-3 mt-3 border-t border-slate-100 flex justify-end">
+              <button
+                onClick={() => setPreviewAlbum(null)}
+                className="rounded-lg bg-slate-200 hover:bg-slate-300 px-4 py-1.5 text-xs font-bold text-slate-800"
+              >
+                Close Preview
+              </button>
+            </div>
           </div>
         </div>
       )}

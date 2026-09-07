@@ -13,7 +13,14 @@ const getLocalJobs = (): JobListing[] => {
     return SEED_JOBS;
   }
   try {
-    return JSON.parse(stored);
+    const list: JobListing[] = JSON.parse(stored);
+    const cleanList = Array.isArray(list)
+      ? list.filter((j) => !j.id.startsWith('JOB_10') && !j.id.startsWith('JOB_SEED_'))
+      : [];
+    if (cleanList.length !== list.length) {
+      localStorage.setItem(LOCAL_STORAGE_JOBS_KEY, JSON.stringify(cleanList));
+    }
+    return cleanList;
   } catch {
     return SEED_JOBS;
   }

@@ -44,8 +44,11 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={`${playfair.variable} ${jakarta.variable} h-full`}>
-      <body className="flex min-h-full flex-col bg-white text-slate-800 font-sans antialiased selection:bg-amber-100 selection:text-amber-900">
+    <html lang="en" suppressHydrationWarning className={`${playfair.variable} ${jakarta.variable} h-full`}>
+      <body
+        suppressHydrationWarning
+        className="flex min-h-full flex-col bg-white text-slate-800 font-sans antialiased selection:bg-amber-100 selection:text-amber-900"
+      >
         <LanguageProvider>
           <Header />
           <main className="flex-1">{children}</main>

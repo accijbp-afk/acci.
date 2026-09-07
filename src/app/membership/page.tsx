@@ -4,7 +4,6 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { membersService } from '@/services/appwrite/members';
 import { SEED_CATEGORIES, SEED_INDUSTRIES } from '@/services/seedData';
-import { CheckCircle2, ShieldCheck, ArrowRight, Building2, Award, Users, FileText, Check } from 'lucide-react';
 
 export default function MembershipPage() {
   const [submitting, setSubmitting] = useState(false);
@@ -89,169 +88,14 @@ export default function MembershipPage() {
       <section className="bg-[#07174a] text-white py-14 border-b-4 border-amber-400">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <span className="text-xs font-bold uppercase tracking-widest text-amber-400">
-            Chamber Affiliation & Privileges
+            100% Free of Cost Community Portal
           </span>
           <h1 className="font-serif-heading text-3xl sm:text-5xl font-bold text-white mt-1">
-            Membership & Business Enrolment
+            Become a Member
           </h1>
           <p className="mt-3 text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
-            Join the apex network of Agrawal enterprises in Jabalpur and Mahakoshal. Get verified, access inter-community B2B networks, and expand your commercial footprint.
+            Register your enterprise with the Agrawal Chamber of Commerce &amp; Industries (ACCI) Jabalpur. Get verified, access commercial networks, and list your business for free.
           </p>
-        </div>
-      </section>
-
-      {/* Membership Tiers */}
-      <section className="py-14 bg-white border-b border-slate-200">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="text-center max-w-xl mx-auto mb-10">
-            <span className="text-xs font-bold uppercase tracking-widest text-[#1540a8]">
-              Membership Tiers
-            </span>
-            <h2 className="font-serif-heading text-2xl font-bold text-[#07174a] mt-1">
-              Choose Your Chamber Affiliation
-            </h2>
-            <p className="text-xs text-slate-500 mt-1">
-              All Agrawal community business owners in Jabalpur can list their enterprise for FREE.
-            </p>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-5xl mx-auto">
-            {/* Standard Listing */}
-            <div className="rounded-2xl border border-slate-200 bg-[#faf8f5] p-6 shadow-xs flex flex-col justify-between">
-              <div>
-                <div className="text-xs font-bold uppercase tracking-wider text-slate-500 mb-1">
-                  Community Member
-                </div>
-                <div className="font-serif-heading text-2xl font-bold text-[#07174a]">
-                  Free Enrolment
-                </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  Essential verification for every small trader and shopkeeper.
-                </p>
-
-                <ul className="mt-6 space-y-2.5 text-xs text-slate-600">
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span>Verified directory listing</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span>Direct WhatsApp & phone lead buttons</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span>Post job vacancies for your shop/firm</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-emerald-600 shrink-0" />
-                    <span>Access to Chamber circulars & alerts</span>
-                  </li>
-                </ul>
-              </div>
-              <div className="mt-8 pt-4 border-t border-slate-200">
-                <a
-                  href="#application-form"
-                  onClick={() => setForm({ ...form, plan: 'Free' })}
-                  className="w-full inline-flex items-center justify-center rounded-lg border border-[#1540a8] py-2 text-xs font-bold text-[#1540a8] hover:bg-[#1540a8] hover:text-white transition-colors"
-                >
-                  Select Free Plan
-                </a>
-              </div>
-            </div>
-
-            {/* Pro Member */}
-            <div className="rounded-2xl border-2 border-[#1540a8] bg-white p-6 shadow-md flex flex-col justify-between relative">
-              <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-[#1540a8] text-white text-[10px] uppercase tracking-widest font-bold px-3 py-0.5 rounded-full">
-                Most Popular
-              </div>
-              <div>
-                <div className="text-xs font-bold uppercase tracking-wider text-[#1540a8] mb-1">
-                  Pro Enterprise
-                </div>
-                <div className="font-serif-heading text-2xl font-bold text-[#07174a]">
-                  Annual Patronage
-                </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  For established retailers, stockists, and professionals.
-                </p>
-
-                <ul className="mt-6 space-y-2.5 text-xs text-slate-700">
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-[#1540a8] shrink-0" />
-                    <span><strong>Everything in Free</strong></span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-[#1540a8] shrink-0" />
-                    <span>Featured top placement in Directory</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-[#1540a8] shrink-0" />
-                    <span>Pro Member Gold Crest verification badge</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-[#1540a8] shrink-0" />
-                    <span>VIP Passes to Annual Business Conclave</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-[#1540a8] shrink-0" />
-                    <span>GST & legal mediation desk assistance</span>
-                  </li>
-                </ul>
-              </div>
-              <div className="mt-8 pt-4 border-t border-slate-200">
-                <a
-                  href="#application-form"
-                  onClick={() => setForm({ ...form, plan: 'Pro' })}
-                  className="w-full inline-flex items-center justify-center rounded-lg bg-[#1540a8] py-2 text-xs font-bold text-white hover:bg-[#07174a] transition-colors"
-                >
-                  Select Pro Tier
-                </a>
-              </div>
-            </div>
-
-            {/* Corporate / Patron */}
-            <div className="rounded-2xl border border-amber-300 bg-gradient-to-br from-amber-50/60 to-white p-6 shadow-xs flex flex-col justify-between">
-              <div>
-                <div className="text-xs font-bold uppercase tracking-wider text-amber-700 mb-1">
-                  Corporate Patron
-                </div>
-                <div className="font-serif-heading text-2xl font-bold text-[#07174a]">
-                  Life Corporate Fellow
-                </div>
-                <p className="text-xs text-slate-500 mt-1">
-                  For large manufacturers, hospitals, and fleet operators.
-                </p>
-
-                <ul className="mt-6 space-y-2.5 text-xs text-slate-600">
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-amber-600 shrink-0" />
-                    <span><strong>All Pro Privileges Included</strong></span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-amber-600 shrink-0" />
-                    <span>Permanent Council Advisory voting privilege</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-amber-600 shrink-0" />
-                    <span>Exhibition stall space at Chamber Expos</span>
-                  </li>
-                  <li className="flex items-center gap-2">
-                    <Check className="h-4 w-4 text-amber-600 shrink-0" />
-                    <span>Government delegation representation seat</span>
-                  </li>
-                </ul>
-              </div>
-              <div className="mt-8 pt-4 border-t border-amber-200">
-                <a
-                  href="#application-form"
-                  onClick={() => setForm({ ...form, plan: 'Premium' })}
-                  className="w-full inline-flex items-center justify-center rounded-lg bg-amber-500 py-2 text-xs font-bold text-[#07174a] hover:bg-amber-400 transition-colors"
-                >
-                  Select Patron Tier
-                </a>
-              </div>
-            </div>
-          </div>
         </div>
       </section>
 
@@ -261,13 +105,13 @@ export default function MembershipPage() {
           <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-xl">
             <div className="border-b border-slate-200 pb-4 mb-6">
               <span className="text-[10px] font-bold uppercase tracking-widest text-[#1540a8]">
-                Official Enrolment Form
+                Official Enrolment Form • 100% Free
               </span>
               <h2 className="font-serif-heading text-2xl font-bold text-[#07174a] mt-0.5">
                 Register Your Business with ACCI
               </h2>
               <p className="text-xs text-slate-500 mt-1">
-                Selected Plan: <strong className="text-amber-700">{form.plan} Plan</strong> • Takes less than 5 minutes.
+                Completely free of cost for all Agrawal community business owners • Takes less than 5 minutes.
               </p>
             </div>
 

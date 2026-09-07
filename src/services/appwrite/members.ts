@@ -14,7 +14,14 @@ const getLocalMembers = (): MemberBusiness[] => {
     return SEED_MEMBERS;
   }
   try {
-    return JSON.parse(stored);
+    const list: MemberBusiness[] = JSON.parse(stored);
+    const cleanList = Array.isArray(list)
+      ? list.filter((m) => !m.id.startsWith('VND_10') && m.id !== 'VND_1785762656744_88')
+      : [];
+    if (cleanList.length !== list.length) {
+      localStorage.setItem(LOCAL_STORAGE_MEMBERS_KEY, JSON.stringify(cleanList));
+    }
+    return cleanList;
   } catch {
     return SEED_MEMBERS;
   }
@@ -229,6 +236,30 @@ export const membersService = {
       return true;
     }
     return false;
+  },
+
+  async updateMember(id: string, updates: Partial<MemberBusiness>): Promise<MemberBusiness | null> {
+    if (isAppwriteConfigured()) {
+      try {
+        await databases.updateDocument(
+          APPWRITE_CONFIG.databaseId,
+          APPWRITE_CONFIG.collections.members,
+          id,
+          updates
+        );
+      } catch {
+        // Continue to local
+      }
+    }
+
+    const local = getLocalMembers();
+    const idx = local.findIndex((m) => m.id === id || m.$id === id);
+    if (idx !== -1) {
+      local[idx] = { ...local[idx], ...updates };
+      saveLocalMembers(local);
+      return local[idx];
+    }
+    return null;
   },
 
   async getReviews(vendorId: string): Promise<BusinessReview[]> {

@@ -13,7 +13,14 @@ const getLocalNews = (): ChamberNews[] => {
     return SEED_NEWS;
   }
   try {
-    return JSON.parse(stored);
+    const list: ChamberNews[] = JSON.parse(stored);
+    const cleanList = Array.isArray(list)
+      ? list.filter((n) => !n.id.startsWith('NEWS_10') && !n.id.startsWith('NEWS_SEED_'))
+      : [];
+    if (cleanList.length !== list.length) {
+      localStorage.setItem(LOCAL_STORAGE_NEWS_KEY, JSON.stringify(cleanList));
+    }
+    return cleanList;
   } catch {
     return SEED_NEWS;
   }

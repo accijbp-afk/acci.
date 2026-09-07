@@ -6,35 +6,27 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/components/common/LanguageContext';
 import { membersService } from '@/services/appwrite/members';
-import { eventsService } from '@/services/appwrite/events';
 import { jobsService } from '@/services/appwrite/jobs';
 import { newsService } from '@/services/appwrite/news';
-import { SEED_CATEGORIES, SEED_INDUSTRIES, SEED_IMPACT_STORIES, SEED_GALLERY, GalleryAlbum } from '@/services/seedData';
-import { MemberBusiness, ChamberEvent, JobListing, ChamberNews } from '@/types';
+import { galleryService } from '@/services/appwrite/gallery';
+import { SEED_CATEGORIES, SEED_INDUSTRIES, SEED_GALLERY } from '@/services/seedData';
+import { MemberBusiness, JobListing, ChamberNews, GalleryAlbum } from '@/types';
+import { getBusinessBanner } from '@/utils/businessImage';
 import {
   Search,
   CheckCircle2,
-  Building2,
   Phone,
   MessageSquare,
-  Calendar,
   MapPin,
   Clock,
   ArrowRight,
   Shield,
-  Briefcase,
-  Award,
-  Sparkles,
-  ExternalLink,
   ChevronRight,
   Star,
-  FileText,
   Camera,
-  Layers,
-  ChevronDown,
   X,
-  Radio,
-  Flame,
+  Building2,
+  Briefcase,
 } from 'lucide-react';
 
 export default function HomePage() {
@@ -42,9 +34,10 @@ export default function HomePage() {
   const { t, lang } = useLanguage();
 
   const [searchTerm, setSearchTerm] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('');
   const [selectedIndustry, setSelectedIndustry] = useState('');
   const [featuredMembers, setFeaturedMembers] = useState<MemberBusiness[]>([]);
-  const [upcomingEvents, setUpcomingEvents] = useState<ChamberEvent[]>([]);
+  const [galleryAlbums, setGalleryAlbums] = useState<GalleryAlbum[]>([]);
   const [recentJobs, setRecentJobs] = useState<JobListing[]>([]);
   const [chamberNews, setChamberNews] = useState<ChamberNews[]>([]);
   const [activeModalMember, setActiveModalMember] = useState<MemberBusiness | null>(null);
@@ -54,333 +47,183 @@ export default function HomePage() {
     membersService
       .getMembers({ featuredOnly: true, limit: 6 })
       .then((res) => setFeaturedMembers(res.members));
-    eventsService.getEvents().then((evs) => setUpcomingEvents(evs.slice(0, 3)));
+    galleryService.getAlbums().then((albs) => setGalleryAlbums(albs.slice(0, 4)));
     jobsService.getJobs({ activeOnly: true }).then((jbs) => setRecentJobs(jbs.slice(0, 3)));
-    newsService.getNews().then((news) => setChamberNews(news.slice(0, 3)));
+    newsService.getNews().then((news) => setChamberNews(news));
   }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     const params = new URLSearchParams();
     if (searchTerm.trim()) params.set('search', searchTerm.trim());
+    if (selectedCategory) params.set('category', selectedCategory);
     if (selectedIndustry) params.set('industry', selectedIndustry);
     router.push(`/directory?${params.toString()}`);
   };
 
   return (
     <div className="flex flex-col min-h-screen bg-[#faf8f5]">
-      {/* ── 0. OFFICIAL CHAMBER GAZETTE TICKER TAPE ───────────────────── */}
+      {/* ── 0. CHAMBER NEWS TICKER TAPE ───────────────────── */}
       <div className="bg-[#051136] border-b border-amber-400/30 text-xs text-white py-2 px-4">
-        <div className="mx-auto max-w-7xl flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-          <div className="flex items-center gap-2 overflow-hidden">
-            <span className="inline-flex items-center gap-1.5 rounded-full bg-red-600/90 px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase shrink-0">
-              <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
-              Chamber Gazette
-            </span>
-            <div className="text-slate-200 text-xs font-medium truncate">
-              Delegation meets MP Industries Minister for Jabalpur Logistics Hub • Central India Business Conclave scheduled for Oct 18 • GST Advisory published
-            </div>
-          </div>
-          <div className="hidden md:flex items-center gap-4 text-[11px] text-slate-300 shrink-0">
-            <span>Official Portal • Jabalpur Secretariat</span>
-            <span className="text-amber-400 font-semibold">T: +91 8319565363</span>
+        <div className="mx-auto max-w-7xl flex items-center gap-3">
+          <span className="inline-flex items-center gap-1.5 rounded-full bg-red-600/90 px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase shrink-0">
+            <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
+            {t('Chamber News')}
+          </span>
+          <div className="text-slate-200 text-xs font-medium truncate flex-1">
+            {chamberNews.length > 0
+              ? chamberNews.map((n) => n.title).join('  •  ')
+              : t('Agrawal Chamber of Commerce & Industries (ACCI) Jabalpur • Official Business Portal')}
           </div>
         </div>
       </div>
 
-      {/* ── 1. TWO-COLUMN CORPORATE HERO SECTION ──────────────────────── */}
-      <section className="relative overflow-hidden bg-gradient-to-b from-[#07174a] via-[#091e5e] to-[#040e30] text-white pt-10 pb-16 lg:pt-14 lg:pb-20 border-b border-amber-500/20">
+      {/* ── 1. CENTERED HERO SECTION ──────────────────────── */}
+      <section className="relative overflow-hidden bg-gradient-to-b from-[#07174a] via-[#091e5e] to-[#040e30] text-white pt-14 pb-20 border-b border-amber-500/20">
         {/* Subtle geometric jali filigree background overlay */}
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#d4af37_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
 
-        <div className="relative mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-10 lg:gap-8 items-center">
-            {/* Left Column: Official Chamber Identity & Search */}
-            <div className="lg:col-span-7 flex flex-col items-start text-left">
-              {/* Heraldic Affiliation Seal Eyebrow */}
-              <div className="inline-flex items-center gap-3 rounded-full border border-amber-400/40 bg-amber-400/10 px-3.5 py-1.5 text-xs font-semibold tracking-wider text-amber-300 uppercase backdrop-blur-sm mb-6 shadow-sm">
-                <div className="relative h-6 w-6 rounded-md overflow-hidden shrink-0 border border-amber-400 bg-white p-0.5">
-                  <Image
-                    src="/images/acci_logo.jpg"
-                    alt="ACCI Logo"
-                    fill
-                    className="object-contain"
-                  />
-                </div>
-                <span>Apex Agrawal Trade Body • Estd. 2002 • Jabalpur</span>
-              </div>
+        <div className="relative mx-auto max-w-4xl px-4 sm:px-6 flex flex-col items-center text-center">
+          {/* Heraldic Affiliation Seal Eyebrow */}
+          <div className="inline-flex items-center gap-2.5 rounded-full border border-amber-400/40 bg-amber-400/10 px-4 py-1.5 text-xs font-semibold tracking-wider text-amber-300 uppercase backdrop-blur-sm mb-6 shadow-sm">
+            <div className="relative h-5 w-5 rounded-md overflow-hidden shrink-0 border border-amber-400 bg-white p-0.5">
+              <Image
+                src="/images/acci_logo.jpg"
+                alt="ACCI Logo"
+                fill
+                className="object-contain"
+              />
+            </div>
+            <span>Apex Agrawal Trade Body • Jabalpur</span>
+          </div>
 
-              {/* Dignified Corporate Headline */}
-              <h1 className="font-serif-heading text-3xl sm:text-5xl lg:text-5xl font-extrabold tracking-tight text-white leading-tight">
-                Catalyzing Central India&apos;s{' '}
-                <span className="text-amber-400 italic font-serif">
-                  Commercial Enterprise
-                </span>{' '}
-                & Industrial Growth.
-              </h1>
+          {/* Dignified Corporate Headline */}
+          <h1 className="font-serif-heading text-3xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-white leading-tight">
+            Jabalpur&apos;s Largest <br className="hidden sm:inline" />
+            <span className="text-amber-400">Agrawal Business Network</span>
+          </h1>
 
-              {/* Supporting Institutional Statement */}
-              <p className="mt-5 text-sm sm:text-base text-slate-300 leading-relaxed max-w-xl">
-                The apex institutional network uniting 500+ manufacturing, wholesale, infrastructure, healthcare, and export enterprises across Jabalpur and the Mahakoshal commercial corridor.
-              </p>
+          {/* Supporting Statement */}
+          <p className="mt-5 text-base sm:text-lg text-slate-300 leading-relaxed max-w-2xl">
+            Find trusted businesses, services &amp; professionals from the Agrawal community in Jabalpur.
+          </p>
 
-              {/* Institutional Enterprise Search Form */}
-              <form
-                onSubmit={handleSearchSubmit}
-                className="mt-8 w-full max-w-xl rounded-xl bg-white p-2 shadow-2xl flex flex-col sm:flex-row gap-2 border-2 border-amber-400/60"
+          {/* Enterprise Search Form */}
+          <form
+            onSubmit={handleSearchSubmit}
+            className="mt-8 w-full max-w-3xl rounded-xl bg-white p-2 shadow-2xl flex flex-col sm:flex-row gap-2 border-2 border-amber-400/60"
+          >
+            <div className="relative flex-1 flex items-center pl-3">
+              <Search className="h-4 w-4 text-slate-400 shrink-0" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                placeholder="Search businesses, jewellers, steel, CAs…"
+                className="w-full bg-transparent px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none"
+              />
+            </div>
+
+            <div className="sm:border-l sm:border-slate-200 pl-2">
+              <select
+                value={selectedCategory}
+                onChange={(e) => setSelectedCategory(e.target.value)}
+                className="w-full bg-transparent py-2 pr-4 pl-2 text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer"
               >
-                <div className="relative flex-1 flex items-center pl-3">
-                  <Search className="h-4 w-4 text-slate-400 shrink-0" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Search 500+ enterprises, jewellers, steel, CAs…"
-                    className="w-full bg-transparent px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none"
-                  />
-                </div>
-
-                <div className="sm:border-l sm:border-slate-200 pl-2">
-                  <select
-                    value={selectedIndustry}
-                    onChange={(e) => setSelectedIndustry(e.target.value)}
-                    className="w-full bg-transparent py-2 pr-6 pl-2 text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer"
-                  >
-                    <option value="">All 16 Sectors</option>
-                    {SEED_INDUSTRIES.map((ind) => (
-                      <option key={ind.id} value={ind.name}>
-                        {ind.name}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-
-                <button
-                  type="submit"
-                  className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#1540a8] hover:bg-[#07174a] text-white px-5 py-2.5 text-xs font-bold tracking-wide transition-all shadow-md cursor-pointer shrink-0"
-                >
-                  <span>Search Directory</span>
-                  <ArrowRight className="h-3.5 w-3.5" />
-                </button>
-              </form>
-
-              {/* Action Links & Quick Tags */}
-              <div className="mt-6 flex flex-wrap items-center gap-4">
-                <Link
-                  href="/directory"
-                  className="inline-flex items-center gap-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-[#07174a] px-5 py-2.5 text-xs font-bold shadow-lg transition-all"
-                >
-                  <span>Explore Verified Directory</span>
-                  <ChevronRight className="h-3.5 w-3.5" />
-                </Link>
-                <Link
-                  href="/membership"
-                  className="inline-flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 text-white px-5 py-2.5 text-xs font-semibold backdrop-blur transition-all"
-                >
-                  <span>+ Enrol Your Enterprise</span>
-                </Link>
-              </div>
-
-              {/* Trust Accreditation Line */}
-              <div className="mt-8 pt-5 border-t border-white/10 flex flex-wrap items-center gap-6 text-[11px] text-slate-400">
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-amber-400" />
-                  <span>Government Recognized Body</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-amber-400" />
-                  <span>B2B Dispute Arbitration</span>
-                </div>
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5 text-amber-400" />
-                  <span>Central India Corridors</span>
-                </div>
-              </div>
+                <option value="">All Categories</option>
+                {SEED_CATEGORIES.map((c) => (
+                  <option key={c.id} value={c.name}>
+                    {c.name}
+                  </option>
+                ))}
+              </select>
             </div>
 
-            {/* Right Column: Prestigious Corporate Photography Showcase */}
-            <div className="lg:col-span-5 relative">
-              <div className="relative rounded-2xl overflow-hidden border-2 border-amber-400/70 shadow-2xl bg-stone-900 group">
-                <div className="relative h-80 sm:h-96 w-full">
-                  <Image
-                    src="/images/conclave_hero.jpg"
-                    alt="ACCI Central India Business Conclave"
-                    fill
-                    priority
-                    className="object-cover group-hover:scale-105 transition-transform duration-700"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-[#07174a] via-transparent to-black/30" />
-                </div>
+            <div className="sm:border-l sm:border-slate-200 pl-2">
+              <select
+                value={selectedIndustry}
+                onChange={(e) => setSelectedIndustry(e.target.value)}
+                className="w-full bg-transparent py-2 pr-4 pl-2 text-xs font-semibold text-slate-700 focus:outline-none cursor-pointer"
+              >
+                <option value="">All Industries</option>
+                {SEED_INDUSTRIES.map((ind) => (
+                  <option key={ind.id} value={ind.name}>
+                    {ind.name}
+                  </option>
+                ))}
+              </select>
+            </div>
 
-                {/* Overlaid Gold Badge */}
-                <div className="absolute top-4 left-4 rounded-md bg-amber-400/95 text-[#07174a] px-3 py-1 text-[10px] font-extrabold uppercase tracking-wider shadow-md backdrop-blur-xs flex items-center gap-1.5">
-                  <Award className="h-3 w-3" />
-                  <span>Central India Business Conclave</span>
-                </div>
+            <button
+              type="submit"
+              className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#1540a8] hover:bg-[#07174a] text-white px-5 py-2.5 text-xs font-bold tracking-wide transition-all shadow-md cursor-pointer shrink-0"
+            >
+              <span>Search Directory</span>
+              <ArrowRight className="h-3.5 w-3.5" />
+            </button>
+          </form>
 
-                {/* Overlaid Bottom Details */}
-                <div className="absolute bottom-0 inset-x-0 p-5 text-white bg-gradient-to-t from-[#07174a] to-transparent">
-                  <div className="text-[11px] font-bold text-amber-300 uppercase tracking-wider">
-                    Annual Leadership Assembly • Jabalpur
-                  </div>
-                  <h3 className="font-serif-heading text-lg font-bold text-white mt-0.5">
-                    600+ Industrial Captains, Policymakers & MSME Leaders
-                  </h3>
-                  <p className="text-[11px] text-slate-300 mt-1 line-clamp-2">
-                    Deliberating on the MP Industrial Policy, tax incentives, export infrastructure, and cross-border trade alliances.
-                  </p>
-                </div>
-              </div>
-
-              {/* Floating Notice Card */}
-              <div className="hidden sm:flex items-center gap-3 absolute -bottom-5 -left-5 rounded-xl border border-amber-400/40 bg-[#07174a]/95 p-3.5 shadow-xl backdrop-blur-md text-white max-w-xs">
-                <div className="relative h-11 w-11 rounded-lg overflow-hidden shrink-0 border border-amber-400 bg-white p-1">
-                  <Image
-                    src="/images/acci_logo.jpg"
-                    alt="ACCI Logo"
-                    fill
-                    className="object-contain"
-                  />
-                </div>
-                <div className="text-[11px]">
-                  <div className="font-bold text-amber-300">Office Bearers & Council</div>
-                  <div className="text-slate-300">Secretariat, Napier Town, Jabalpur</div>
-                </div>
-              </div>
-            </div>
-          </div>
-
-          {/* Chamber Vital Corporate Metrics Bar */}
-          <div className="mt-14 pt-8 border-t border-white/10 grid grid-cols-2 lg:grid-cols-4 gap-6 text-center">
-            <div className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-amber-400/30 transition-colors">
-              <div className="font-serif-heading text-2xl sm:text-3xl font-extrabold text-amber-400">
-                500+
-              </div>
-              <div className="text-xs text-slate-300 mt-1 font-medium">
-                Verified Member Enterprises
-              </div>
-            </div>
-            <div className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-amber-400/30 transition-colors">
-              <div className="font-serif-heading text-2xl sm:text-3xl font-extrabold text-amber-400">
-                ₹2,500+ Cr
-              </div>
-              <div className="text-xs text-slate-300 mt-1 font-medium">
-                Cumulative Regional Trade
-              </div>
-            </div>
-            <div className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-amber-400/30 transition-colors">
-              <div className="font-serif-heading text-2xl sm:text-3xl font-extrabold text-amber-400">
-                16
-              </div>
-              <div className="text-xs text-slate-300 mt-1 font-medium">
-                Core Industrial Sectors
-              </div>
-            </div>
-            <div className="p-4 rounded-xl bg-white/5 border border-white/10 hover:border-amber-400/30 transition-colors">
-              <div className="font-serif-heading text-2xl sm:text-3xl font-extrabold text-amber-400">
-                24+ Years
-              </div>
-              <div className="text-xs text-slate-300 mt-1 font-medium">
-                Institutional Trust & Legacy
-              </div>
-            </div>
+          {/* Action Links */}
+          <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
+            <Link
+              href="/directory"
+              className="inline-flex items-center gap-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-[#07174a] px-6 py-3 text-xs sm:text-sm font-bold shadow-lg transition-all"
+            >
+              <span>Explore Verified Directory</span>
+              <ChevronRight className="h-4 w-4" />
+            </Link>
+            <Link
+              href="/membership"
+              className="inline-flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 text-white px-6 py-3 text-xs sm:text-sm font-semibold backdrop-blur transition-all"
+            >
+              <span>+ Become a Member</span>
+            </Link>
           </div>
         </div>
       </section>
 
-      {/* ── 2. PRESIDENT'S DESK / EXECUTIVE MESSAGE ───────────────────── */}
-      <section className="py-14 bg-white border-b border-stone-200">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="rounded-2xl border border-stone-200 bg-[#fcfaf7] p-6 sm:p-10 shadow-xs relative overflow-hidden">
-            <div className="absolute -right-8 -bottom-8 opacity-5 font-serif text-9xl font-black text-[#07174a] pointer-events-none">
-              ACCI
-            </div>
-
-            <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-center relative z-10">
-              {/* President Profile Block */}
-              <div className="lg:col-span-4 flex flex-col items-center sm:items-start text-center sm:text-left border-b lg:border-b-0 lg:border-r border-stone-200 pb-6 lg:pb-0 lg:pr-8">
-                <div className="relative h-24 w-24 rounded-2xl overflow-hidden shadow-md border-2 border-amber-500 mb-4 bg-white p-2">
-                  <Image
-                    src="/images/acci_logo.jpg"
-                    alt="ACCI Official Emblem"
-                    fill
-                    className="object-contain"
-                  />
-                </div>
-                <div className="text-[11px] font-bold uppercase tracking-wider text-amber-800">
-                  President&apos;s Secretariat
-                </div>
-                <h3 className="font-serif-heading text-xl font-bold text-[#07174a] mt-0.5">
-                  Shri Sudhi Agrawal
-                </h3>
-                <p className="text-xs text-slate-600 mt-1">
-                  President, ACCI Jabalpur<br />
-                  Managing Director, Better Foods India
-                </p>
-                <div className="mt-4 pt-4 border-t border-stone-200 w-full flex items-center justify-between text-[11px] text-slate-500">
-                  <span>Secretariat: Napier Town</span>
-                  <Link href="/committee" className="text-[#1540a8] font-bold hover:underline">
-                    Executive Council →
-                  </Link>
-                </div>
-              </div>
-
-              {/* President's Executive Message */}
-              <div className="lg:col-span-8">
-                <span className="text-xs font-bold uppercase tracking-widest text-[#1540a8]">
-                  Institutional Mission & Guidance
-                </span>
-                <h2 className="font-serif-heading text-2xl sm:text-3xl font-bold text-[#07174a] mt-1">
-                  &ldquo;Building Resilient Enterprises, Upholding Commercial Dharma.&rdquo;
-                </h2>
-                <p className="mt-3 text-xs sm:text-sm leading-relaxed text-slate-700">
-                  The Agrawal trading community has been the bedrock of commerce, wealth generation, and social welfare in Central India for generations. In an era of rapid supply-chain consolidation and digital transition, ACCI provides our local manufacturers, grain traders, jewellers, and professionals with the unified collective voice, transparent dispute resolution, and institutional clout required to scale with confidence.
-                </p>
-                <div className="mt-6 flex flex-wrap items-center gap-4">
-                  <Link
-                    href="/about"
-                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#07174a] px-4 py-2 text-xs font-bold text-white hover:bg-[#1540a8] transition-colors"
-                  >
-                    <span>Read Chamber Charter & History</span>
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                  <Link
-                    href="/news"
-                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-stone-100 transition-colors"
-                  >
-                    <span>View Official Circulars</span>
-                  </Link>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </section>
-
-      {/* ── 3. SECTORAL CLASSIFICATION (PHOTOGRAPHIC INDUSTRY GRID) ────── */}
+      {/* ── 3. BROWSE BY CATEGORY & INDUSTRY ─────────────────────────── */}
       <section className="py-16 bg-[#faf8f5] border-b border-stone-200">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10">
             <div>
               <span className="text-xs font-bold uppercase tracking-widest text-[#1540a8]">
-                Commercial Scope
+                Directory Scope
               </span>
               <h2 className="font-serif-heading text-2xl sm:text-3xl font-bold text-[#07174a] mt-1">
-                Major Industry & Trade Sectors
+                Explore by Category &amp; Industry
               </h2>
               <p className="text-xs sm:text-sm text-slate-600 mt-1">
-                Representing heavy manufacturing, agro-mandi trading, logistics, bullion, and specialized advisory across Mahakoshal.
+                Find verified businesses classified across primary categories and key industries in Jabalpur.
               </p>
             </div>
             <Link
               href="/directory"
               className="mt-4 sm:mt-0 text-xs sm:text-sm font-bold text-[#1540a8] hover:text-[#07174a] flex items-center gap-1 group"
             >
-              <span>Explore All 70+ Sectors</span>
+              <span>View Full Directory</span>
               <ArrowRight className="h-4 w-4 group-hover:translate-x-1 transition-transform" />
             </Link>
           </div>
 
+          {/* Category Badges Row */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-7 gap-3 mb-8">
+            {SEED_CATEGORIES.map((cat) => (
+              <Link
+                key={cat.id}
+                href={`/directory?category=${encodeURIComponent(cat.name)}`}
+                className="group flex flex-col items-center text-center p-3.5 rounded-xl border border-stone-200 bg-white hover:border-amber-400 hover:shadow-md transition-all"
+              >
+                <span className="text-2xl mb-1.5 group-hover:scale-110 transition-transform">{cat.icon}</span>
+                <span className="text-xs font-bold text-slate-800 group-hover:text-[#1540a8] transition-colors line-clamp-1">
+                  {cat.name}
+                </span>
+                <span className="text-[10px] text-slate-400 mt-0.5">Category</span>
+              </Link>
+            ))}
+          </div>
+
+          {/* Key Industries Grid */}
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
             {SEED_INDUSTRIES.slice(0, 8).map((ind) => (
               <Link
@@ -406,7 +249,7 @@ export default function HomePage() {
                     {ind.name}
                   </h3>
                   <div className="mt-2 flex items-center justify-between text-[11px] text-slate-300 pt-2 border-t border-white/15">
-                    <span>Verified Establishments</span>
+                    <span>Verified Businesses</span>
                     <ArrowRight className="h-3 w-3 text-amber-400 group-hover:translate-x-1 transition-transform" />
                   </div>
                 </div>
@@ -419,7 +262,7 @@ export default function HomePage() {
               href="/directory"
               className="inline-flex items-center gap-2 rounded-lg bg-white border border-stone-300 hover:border-[#1540a8] px-6 py-2.5 text-xs font-bold text-slate-800 shadow-xs transition-all"
             >
-              <span>View Directory for all 16 Classified Sectors</span>
+              <span>Explore All Categories &amp; Industries in Directory</span>
               <ChevronRight className="h-3.5 w-3.5 text-[#1540a8]" />
             </Link>
           </div>
@@ -450,12 +293,26 @@ export default function HomePage() {
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {featuredMembers.map((biz) => {
-              const photo =
-                biz.workPhotos && biz.workPhotos[0]
-                  ? biz.workPhotos[0]
-                  : 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80';
+          {featuredMembers.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-stone-300 bg-stone-50/50 p-12 text-center max-w-md mx-auto">
+              <Building2 className="h-10 w-10 text-stone-400 mx-auto mb-3" />
+              <h3 className="font-serif-heading text-lg font-bold text-[#07174a]">
+                {t('No Enterprises Listed Yet')}
+              </h3>
+              <p className="text-xs text-slate-500 mt-1 mb-5">
+                {t('Be the first to list and verify your business enterprise in the Jabalpur Agrawal network.')}
+              </p>
+              <Link
+                href="/membership"
+                className="inline-flex items-center gap-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-[#07174a] px-5 py-2 text-xs font-bold transition-all shadow-sm"
+              >
+                <span>{t('+ List Your Business')}</span>
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+              {featuredMembers.map((biz) => {
+              const photo = getBusinessBanner(biz);
 
               return (
                 <div
@@ -563,227 +420,96 @@ export default function HomePage() {
               );
             })}
           </div>
-        </div>
-      </section>
+        )}
+      </div>
+    </section>
 
-      {/* ── 5. CHAMBER PHOTO ARCHIVES & MEMORIES GALLERY ─────────────── */}
+      {/* ── 5. GALLERY GLIMPSE (CONCLUDED EVENTS) ───────────────────── */}
       <section className="py-16 bg-[#07174a] text-white border-b border-amber-500/30">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10">
             <div>
               <span className="text-xs font-bold uppercase tracking-widest text-amber-400">
-                Institutional Archives
+                Photo Gallery
               </span>
               <h2 className="font-serif-heading text-2xl sm:text-3xl font-bold text-white mt-1">
-                Chamber Conclaves & Historical Memories
+                Concluded Events &amp; Moments
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 mt-1">
-                Visual documentation of annual industrial conclaves, trade delegations, and Agrasen Jayanti expos in Jabalpur.
+                A glimpse of conclaves, trade meets, and celebrations organized by ACCI Jabalpur.
               </p>
             </div>
-            <div className="mt-4 sm:mt-0 flex items-center gap-2 text-xs text-amber-300">
+            <Link
+              href="/gallery"
+              className="mt-4 sm:mt-0 inline-flex items-center gap-2 rounded-lg bg-amber-400 hover:bg-amber-300 text-[#07174a] px-5 py-2.5 text-xs font-bold transition-all shadow-md"
+            >
               <Camera className="h-4 w-4" />
-              <span>Official Media Archives</span>
-            </div>
-          </div>
-
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-            {SEED_GALLERY.map((album) => (
-              <div
-                key={album.id}
-                onClick={() => setActiveGalleryItem(album)}
-                className="group cursor-pointer rounded-xl overflow-hidden border border-white/20 bg-white/5 hover:border-amber-400 transition-all flex flex-col justify-between"
-              >
-                <div className="relative h-48 w-full bg-stone-800">
-                  <Image
-                    src={album.coverUrl}
-                    alt={album.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-                  <span className="absolute top-3 right-3 rounded-full bg-black/60 backdrop-blur-sm px-2.5 py-0.5 text-[10px] font-bold text-amber-300 border border-white/20">
-                    {album.photoCount} Photos
-                  </span>
-                  <span className="absolute bottom-3 left-3 rounded bg-amber-400 text-[#07174a] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">
-                    {album.category}
-                  </span>
-                </div>
-
-                <div className="p-4 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h3 className="font-serif-heading text-sm font-bold text-white group-hover:text-amber-300 transition-colors line-clamp-2">
-                      {album.title}
-                    </h3>
-                    <p className="mt-1 text-[11px] text-slate-300 line-clamp-2">
-                      {album.description}
-                    </p>
-                  </div>
-                  <div className="mt-3 pt-2 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-400">
-                    <span>📍 {album.date}</span>
-                    <span className="text-amber-400 font-semibold group-hover:underline">View Album</span>
-                  </div>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── 6. OFFICIAL CHAMBER GAZETTE & CIRCULARS ──────────────────── */}
-      <section className="py-16 bg-[#faf8f5] border-b border-stone-200">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-[#1540a8]">
-                Official Gazette
-              </span>
-              <h2 className="font-serif-heading text-2xl sm:text-3xl font-bold text-[#07174a] mt-1">
-                Chamber Circulars & Policy Memorandums
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-600 mt-1">
-                Formal representations to state departments, GST/income tax alerts, and industrial corridor advisories.
-              </p>
-            </div>
-            <Link
-              href="/news"
-              className="mt-4 sm:mt-0 text-xs sm:text-sm font-bold text-[#1540a8] hover:underline flex items-center gap-1"
-            >
-              <span>View All Circulars</span>
-              <ArrowRight className="h-4 w-4" />
+              <span>View All Events Gallery</span>
+              <ArrowRight className="h-3.5 w-3.5" />
             </Link>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {chamberNews.map((article) => (
-              <div
-                key={article.id}
-                className="rounded-xl border border-stone-200 bg-white p-6 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
-              >
-                <div>
-                  <div className="flex items-center justify-between gap-2 mb-3">
-                    <span className="rounded bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold px-2 py-0.5 uppercase tracking-wider">
-                      {article.category}
-                    </span>
-                    <span className="text-[11px] text-slate-400">
-                      {article.publishedAt}
-                    </span>
-                  </div>
-
-                  <h3 className="font-serif-heading text-base font-bold text-[#07174a] hover:text-[#1540a8] transition-colors">
-                    <Link href={`/news`}>{article.title}</Link>
-                  </h3>
-
-                  <p className="mt-2.5 text-xs text-slate-600 line-clamp-3 leading-relaxed">
-                    {article.excerpt}
-                  </p>
-                </div>
-
-                <div className="mt-5 pt-3 border-t border-stone-100 flex items-center justify-between text-xs">
-                  <span className="text-[11px] text-slate-400">Ref: ACCI/PUB/{article.id.slice(-4)}</span>
-                  <Link
-                    href={`/news`}
-                    className="font-bold text-[#1540a8] hover:text-[#07174a] flex items-center gap-1"
-                  >
-                    <span>Read Memorandum</span>
-                    <ArrowRight className="h-3.5 w-3.5" />
-                  </Link>
-                </div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* ── 7. CONCLAVES & DELEGATIONS ───────────────────────────────── */}
-      <section className="py-16 bg-white border-b border-stone-200">
-        <div className="mx-auto max-w-7xl px-4 sm:px-6">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10">
-            <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-[#1540a8]">
-                Assembly Calendar
-              </span>
-              <h2 className="font-serif-heading text-2xl sm:text-3xl font-bold text-[#07174a] mt-1">
-                Conclaves, Summits & Delegations
-              </h2>
-              <p className="text-xs sm:text-sm text-slate-600 mt-1">
-                Official business assemblies, MSME policy workshops, and trade fairs organized across Jabalpur.
+          {galleryAlbums.length === 0 ? (
+            <div className="rounded-2xl border border-white/15 bg-white/5 p-12 text-center max-w-md mx-auto">
+              <Camera className="h-10 w-10 text-amber-400/60 mx-auto mb-3" />
+              <h3 className="font-serif-heading text-lg font-bold text-white">
+                {t('No Event Archives Yet')}
+              </h3>
+              <p className="text-xs text-slate-300 mt-1">
+                {t('Concluded events and photographs will be published here by the secretariat.')}
               </p>
             </div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+              {galleryAlbums.slice(0, 4).map((album) => (
+                <div
+                  key={album.id}
+                  onClick={() => setActiveGalleryItem(album)}
+                  className="group cursor-pointer rounded-xl overflow-hidden border border-white/20 bg-white/5 hover:border-amber-400 transition-all flex flex-col justify-between"
+                >
+                  <div className="relative h-48 w-full bg-stone-800">
+                    <Image
+                      src={album.coverUrl}
+                      alt={album.title}
+                      fill
+                      className="object-cover group-hover:scale-105 transition-transform duration-500"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+                    <span className="absolute top-3 right-3 rounded-full bg-black/60 backdrop-blur-sm px-2.5 py-0.5 text-[10px] font-bold text-amber-300 border border-white/20">
+                      {album.photoCount} Photos
+                    </span>
+                    <span className="absolute bottom-3 left-3 rounded bg-amber-400 text-[#07174a] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">
+                      {album.category}
+                    </span>
+                  </div>
+
+                  <div className="p-4 flex-1 flex flex-col justify-between">
+                    <div>
+                      <h3 className="font-serif-heading text-sm font-bold text-white group-hover:text-amber-300 transition-colors line-clamp-2">
+                        {album.title}
+                      </h3>
+                      <p className="mt-1 text-[11px] text-slate-300 line-clamp-2">
+                        {album.description}
+                      </p>
+                    </div>
+                    <div className="mt-3 pt-2 border-t border-white/10 flex items-center justify-between text-[10px] text-slate-400">
+                      <span>📍 {album.date}</span>
+                      <span className="text-amber-400 font-semibold group-hover:underline">View Pictures</span>
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+
+          <div className="mt-10 text-center">
             <Link
-              href="/events"
-              className="mt-4 sm:mt-0 text-xs sm:text-sm font-bold text-[#1540a8] hover:underline flex items-center gap-1"
+              href="/gallery"
+              className="inline-flex items-center gap-2 rounded-lg border border-amber-400/50 bg-white/5 hover:bg-white/10 text-amber-300 px-6 py-2.5 text-xs font-bold transition-all"
             >
-              <span>View Full Calendar</span>
-              <ArrowRight className="h-4 w-4" />
+              <span>Explore All Photo Albums in Gallery</span>
+              <ArrowRight className="h-3.5 w-3.5" />
             </Link>
-          </div>
-
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {upcomingEvents.map((ev) => (
-              <div
-                key={ev.id}
-                className="rounded-xl border border-stone-200 bg-white overflow-hidden shadow-xs hover:shadow-md transition-all flex flex-col justify-between group"
-              >
-                {/* Event Photo Header */}
-                <div className="relative h-44 w-full bg-stone-800">
-                  <Image
-                    src={ev.imageUrl || 'https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&w=800&q=80'}
-                    alt={ev.title}
-                    fill
-                    className="object-cover group-hover:scale-105 transition-transform duration-500"
-                  />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/30 to-transparent" />
-
-                  {/* Date Badge */}
-                  <div className="absolute top-3 left-3 rounded-lg bg-[#07174a]/90 border border-amber-400/50 p-2 text-center text-white backdrop-blur-xs min-w-[50px]">
-                    <div className="font-serif-heading text-lg font-black text-amber-300 leading-none">
-                      {ev.date ? new Date(ev.date).getDate() : '18'}
-                    </div>
-                    <div className="text-[9px] uppercase font-bold text-slate-300">
-                      {ev.date
-                        ? new Date(ev.date).toLocaleString('default', { month: 'short' })
-                        : 'OCT'}
-                    </div>
-                  </div>
-
-                  <span className="absolute top-3 right-3 rounded bg-amber-400 text-[#07174a] px-2 py-0.5 text-[9px] font-bold uppercase tracking-wider">
-                    {ev.category}
-                  </span>
-                </div>
-
-                <div className="p-5 flex-1 flex flex-col justify-between">
-                  <div>
-                    <h3 className="font-serif-heading text-base font-bold text-[#07174a] line-clamp-2">
-                      {ev.title}
-                    </h3>
-                    <div className="mt-2.5 space-y-1 text-xs text-slate-500">
-                      <div className="flex items-center gap-1.5">
-                        <Clock className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                        <span>{ev.time}</span>
-                      </div>
-                      <div className="flex items-start gap-1.5">
-                        <MapPin className="h-3.5 w-3.5 text-slate-400 shrink-0 mt-0.5" />
-                        <span className="line-clamp-1">{ev.venue}</span>
-                      </div>
-                    </div>
-                    <p className="mt-3 text-xs text-slate-600 line-clamp-2">
-                      {ev.description}
-                    </p>
-                  </div>
-
-                  <div className="mt-5 pt-3 border-t border-stone-100 flex items-center justify-between">
-                    <Link
-                      href="/contact"
-                      className="inline-flex items-center gap-1 text-xs font-bold text-[#1540a8] hover:text-[#07174a]"
-                    >
-                      <span>RSVP / Delegate Pass</span>
-                      <ArrowRight className="h-3.5 w-3.5" />
-                    </Link>
-                  </div>
-                </div>
-              </div>
-            ))}
           </div>
         </div>
       </section>
@@ -820,58 +546,76 @@ export default function HomePage() {
             </div>
           </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-            {recentJobs.map((job) => (
-              <div
-                key={job.id}
-                className="rounded-xl border border-stone-200 bg-white p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+          {recentJobs.length === 0 ? (
+            <div className="rounded-2xl border border-dashed border-stone-300 bg-stone-50/50 p-12 text-center max-w-md mx-auto">
+              <Briefcase className="h-10 w-10 text-stone-400 mx-auto mb-3" />
+              <h3 className="font-serif-heading text-lg font-bold text-[#07174a]">
+                {t('No Vacancies Open Currently')}
+              </h3>
+              <p className="text-xs text-slate-500 mt-1 mb-5">
+                {t('Member enterprises can post vacancies and connect with talent from the community.')}
+              </p>
+              <Link
+                href="/jobs/post"
+                className="inline-flex items-center gap-2 rounded-lg bg-[#07174a] hover:bg-[#1540a8] text-white px-5 py-2 text-xs font-bold transition-all shadow-sm"
               >
-                <div>
-                  <div className="flex items-center justify-between mb-2">
-                    <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
-                      {job.category}
-                    </span>
-                    {job.urgency === 'Urgent' && (
-                      <span className="text-[10px] font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200">
-                        Urgent
+                <span>{t('+ Post a Vacancy')}</span>
+              </Link>
+            </div>
+          ) : (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {recentJobs.map((job) => (
+                <div
+                  key={job.id}
+                  className="rounded-xl border border-stone-200 bg-white p-5 shadow-xs hover:shadow-md transition-all flex flex-col justify-between"
+                >
+                  <div>
+                    <div className="flex items-center justify-between mb-2">
+                      <span className="text-[10px] font-bold uppercase tracking-wider bg-slate-100 text-slate-700 px-2 py-0.5 rounded">
+                        {job.category}
                       </span>
-                    )}
+                      {job.urgency === 'Urgent' && (
+                        <span className="text-[10px] font-bold text-red-700 bg-red-50 px-2 py-0.5 rounded border border-red-200">
+                          Urgent
+                        </span>
+                      )}
+                    </div>
+                    <h3 className="font-serif-heading text-base font-bold text-[#07174a]">
+                      {job.title}
+                    </h3>
+                    <div className="text-xs font-semibold text-amber-800 mt-0.5">
+                      {job.company}
+                    </div>
+                    <div className="mt-3 space-y-1 text-xs text-slate-500">
+                      <div className="font-medium text-slate-800">{job.salary}</div>
+                      <div>📍 {job.location}</div>
+                    </div>
+                    <p className="mt-2.5 text-xs text-slate-600 line-clamp-2">
+                      {job.description}
+                    </p>
                   </div>
-                  <h3 className="font-serif-heading text-base font-bold text-[#07174a]">
-                    {job.title}
-                  </h3>
-                  <div className="text-xs font-semibold text-amber-800 mt-0.5">
-                    {job.company}
-                  </div>
-                  <div className="mt-3 space-y-1 text-xs text-slate-500">
-                    <div className="font-medium text-slate-800">{job.salary}</div>
-                    <div>📍 {job.location}</div>
-                  </div>
-                  <p className="mt-2.5 text-xs text-slate-600 line-clamp-2">
-                    {job.description}
-                  </p>
-                </div>
 
-                <div className="mt-5 pt-3 border-t border-stone-100 flex items-center justify-between">
-                  <span className="text-[11px] text-slate-400">
-                    Posted on {job.postedAt}
-                  </span>
-                  <a
-                    href={
-                      job.contactWhatsApp
-                        ? `https://wa.me/${job.contactWhatsApp.replace(/\D/g, '')}?text=Application%20for%20${encodeURIComponent(job.title)}%20at%20${encodeURIComponent(job.company)}`
-                        : `mailto:${job.contactEmail}`
-                    }
-                    target="_blank"
-                    rel="noreferrer"
-                    className="inline-flex items-center gap-1 rounded bg-[#1540a8] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#07174a]"
-                  >
-                    <span>Apply via WhatsApp</span>
-                  </a>
+                  <div className="mt-5 pt-3 border-t border-stone-100 flex items-center justify-between">
+                    <span className="text-[11px] text-slate-400">
+                      Posted on {job.postedAt}
+                    </span>
+                    <a
+                      href={
+                        job.contactWhatsApp
+                          ? `https://wa.me/${job.contactWhatsApp.replace(/\D/g, '')}?text=Application%20for%20${encodeURIComponent(job.title)}%20at%20${encodeURIComponent(job.company)}`
+                          : `mailto:${job.contactEmail}`
+                      }
+                      target="_blank"
+                      rel="noreferrer"
+                      className="inline-flex items-center gap-1 rounded bg-[#07174a] px-3 py-1.5 text-xs font-bold text-white hover:bg-[#1540a8] transition-colors"
+                    >
+                      <span>Apply Now</span>
+                    </a>
+                  </div>
                 </div>
-              </div>
-            ))}
-          </div>
+              ))}
+            </div>
+          )}
         </div>
       </section>
 
@@ -879,13 +623,13 @@ export default function HomePage() {
       <section className="py-16 bg-gradient-to-br from-[#07174a] via-[#0b2168] to-[#040e30] text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 text-center">
           <div className="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-400/10 px-3 py-1 text-xs font-bold uppercase tracking-wider text-amber-300 mb-3">
-            Institutional Accreditation
+            Community Membership
           </div>
           <h2 className="font-serif-heading text-2xl sm:text-4xl font-extrabold text-white mt-1">
             Enrol Your Enterprise with ACCI in 3 Steps
           </h2>
           <p className="mt-2 text-xs sm:text-sm text-slate-300 max-w-xl mx-auto">
-            Become an officially verified business member of Jabalpur&apos;s apex trade alliance.
+            Become an officially verified business member of Jabalpur&apos;s Agrawal trade alliance.
           </p>
 
           <div className="mt-12 grid grid-cols-1 md:grid-cols-3 gap-8 max-w-4xl mx-auto text-left">
@@ -894,7 +638,7 @@ export default function HomePage() {
                 01
               </div>
               <h3 className="font-serif-heading text-base font-bold text-white">
-                Submit Commercial Dossier
+                Submit Commercial Details
               </h3>
               <p className="mt-2 text-xs text-slate-300 leading-relaxed">
                 Provide basic details, GST / shop establishment certificate, core product portfolio, and contact coordinates.
@@ -906,10 +650,10 @@ export default function HomePage() {
                 02
               </div>
               <h3 className="font-serif-heading text-base font-bold text-white">
-                Secretariat Vetting
+                Secretariat Verification
               </h3>
               <p className="mt-2 text-xs text-slate-300 leading-relaxed">
-                The ACCI Executive Council reviews trade authenticity and issues your official Chamber Membership Number.
+                The ACCI Secretariat verifies enterprise details and issues your official Chamber Membership Number.
               </p>
             </div>
 
@@ -918,10 +662,10 @@ export default function HomePage() {
                 03
               </div>
               <h3 className="font-serif-heading text-base font-bold text-white">
-                Access B2B Network & Privileges
+                Access Community Network &amp; Privileges
               </h3>
               <p className="mt-2 text-xs text-slate-300 leading-relaxed">
-                Your enterprise profile is published to the public directory and you gain voting rights, B2B arbitration, and summit passes.
+                Your enterprise profile is published to the public directory and you gain access to the community network, trade arbitration, and event passes.
               </p>
             </div>
           </div>
@@ -931,7 +675,7 @@ export default function HomePage() {
               href="/membership"
               className="inline-flex items-center gap-2 rounded-lg bg-amber-400 px-8 py-3.5 text-xs sm:text-sm font-bold text-[#07174a] shadow-xl hover:bg-amber-300 transition-all hover:scale-105"
             >
-              <span>Enrol Your Enterprise Now — Free</span>
+              <span>Become a Member Now — Free</span>
               <ArrowRight className="h-4 w-4" />
             </Link>
           </div>
@@ -968,11 +712,20 @@ export default function HomePage() {
               />
             </div>
 
-            <div className="p-4 bg-[#051136] text-xs text-slate-300 border-t border-white/10 flex items-center justify-between">
-              <p className="max-w-2xl">{activeGalleryItem.description}</p>
-              <span className="text-amber-400 font-bold shrink-0">
-                {activeGalleryItem.photoCount} High-Resolution Negatives in Archive
-              </span>
+            <div className="p-4 bg-[#051136] text-xs text-slate-300 border-t border-white/10 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <p className="max-w-xl">{activeGalleryItem.description}</p>
+              <div className="flex items-center gap-3 shrink-0">
+                <span className="text-amber-400 font-bold">
+                  {activeGalleryItem.photoCount} Photos
+                </span>
+                <Link
+                  href="/gallery"
+                  onClick={() => setActiveGalleryItem(null)}
+                  className="rounded-lg bg-amber-400 hover:bg-amber-300 text-[#07174a] font-bold px-3 py-1.5 transition-colors"
+                >
+                  Open in Gallery →
+                </Link>
+              </div>
             </div>
           </div>
         </div>
@@ -992,11 +745,7 @@ export default function HomePage() {
             <div className="flex items-start gap-4 mb-4">
               <div className="relative h-16 w-16 shrink-0 rounded-xl overflow-hidden border border-amber-400 bg-stone-100">
                 <Image
-                  src={
-                    activeModalMember.workPhotos && activeModalMember.workPhotos[0]
-                      ? activeModalMember.workPhotos[0]
-                      : '/images/acci_logo.jpg'
-                  }
+                  src={getBusinessBanner(activeModalMember)}
                   alt={activeModalMember.businessName}
                   fill
                   className="object-cover"

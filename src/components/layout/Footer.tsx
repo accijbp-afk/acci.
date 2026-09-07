@@ -15,28 +15,22 @@ export const Footer: React.FC = () => {
         <div className="mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-6">
           <div>
             <div className="text-amber-400 text-xs font-bold tracking-widest uppercase mb-1">
-              Agrawal Chamber of Commerce & Industries • Jabalpur
+              {t('Agrawal Chamber of Commerce & Industries • Jabalpur')}
             </div>
             <h3 className="font-serif-heading text-xl sm:text-2xl font-bold text-white">
-              Are you an Agrawal business owner in Jabalpur?
+              {t('Are you an Agrawal business owner in Jabalpur?')}
             </h3>
             <p className="text-sm text-slate-300 mt-1 max-w-xl">
-              Get verified, access B2B commercial networks, and list your enterprise on Central India&apos;s largest community commerce portal.
+              {t("Get verified, access commercial networks, and list your enterprise on Jabalpur's largest Agrawal community commerce portal.")}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link
               href="/membership"
-              className="inline-flex items-center gap-2 rounded-md bg-amber-400 px-5 py-2.5 text-xs sm:text-sm font-bold text-[#07174a] hover:bg-amber-300 transition-all shadow-md"
+              className="inline-flex items-center gap-2 rounded-md bg-amber-400 px-6 py-2.5 text-xs sm:text-sm font-bold text-[#07174a] hover:bg-amber-300 transition-all shadow-md"
             >
-              <span>Apply for Membership</span>
+              <span>{t('Become a member')}</span>
               <ArrowRight className="h-4 w-4" />
-            </Link>
-            <Link
-              href="/contact"
-              className="inline-flex items-center gap-2 rounded-md border border-white/20 bg-white/5 px-4 py-2.5 text-xs sm:text-sm font-semibold text-white hover:bg-white/10 transition-all"
-            >
-              <span>Contact Secretariat</span>
             </Link>
           </div>
         </div>
@@ -57,23 +51,23 @@ export const Footer: React.FC = () => {
                 />
               </div>
               <div>
-                <span className="font-serif-heading font-bold text-lg text-white block">
-                  AGRAWAL COMMITTEE
+                <span className="font-serif-heading font-bold text-base sm:text-lg text-white block">
+                  {t('Agrawal Chambers of Commerce and Industries')}
                 </span>
                 <span className="text-xs text-amber-300/80 tracking-wider uppercase font-medium">
-                  Chamber of Commerce & Industries
+                  {t('ACCI • Jabalpur')}
                 </span>
               </div>
             </div>
 
             <p className="text-sm text-slate-400 leading-relaxed mb-6">
-              The apex institution fostering business collaboration, ethical enterprise, and collective welfare for the Agrawal community in Jabalpur and Mahakoshal for over two decades.
+              {t('The apex institution fostering business collaboration, ethical enterprise, and collective welfare for the Agrawal community in Jabalpur and Mahakoshal.')}
             </p>
 
             <div className="space-y-2 text-xs text-slate-300">
               <div className="flex items-start gap-2.5">
                 <MapPin className="h-4 w-4 text-amber-400 shrink-0 mt-0.5" />
-                <span>ACCI Secretariat, Napier Town & Civic Centre, Jabalpur, Madhya Pradesh – 482001</span>
+                <span>{t('Jabalpur, Madhya Pradesh – 482001')}</span>
               </div>
               <div className="flex items-center gap-2.5">
                 <Phone className="h-4 w-4 text-amber-400 shrink-0" />
@@ -81,7 +75,7 @@ export const Footer: React.FC = () => {
               </div>
               <div className="flex items-center gap-2.5">
                 <Mail className="h-4 w-4 text-amber-400 shrink-0" />
-                <a href="mailto:accijabalpur@gmail.com" className="hover:text-amber-300">accijabalpur@gmail.com</a>
+                <a href="mailto:accijbp@gmail.com" className="hover:text-amber-300">accijbp@gmail.com</a>
               </div>
             </div>
           </div>
@@ -89,37 +83,37 @@ export const Footer: React.FC = () => {
           {/* Directory Column */}
           <div>
             <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4 border-b border-amber-400/20 pb-2">
-              Industry Directory
+              {t('Industry Directory')}
             </h4>
             <ul className="space-y-2 text-xs">
               <li>
                 <Link href="/directory?category=Manufacturing" className="hover:text-amber-300 transition-colors">
-                  Manufacturing & FMCG
+                  {t('Manufacturing')}
                 </Link>
               </li>
               <li>
                 <Link href="/directory?category=Wholesale" className="hover:text-amber-300 transition-colors">
-                  Wholesale & Commodities
+                  {t('Wholesale')}
                 </Link>
               </li>
               <li>
                 <Link href="/directory?category=Retail" className="hover:text-amber-300 transition-colors">
-                  Retail & Jewellers
+                  {t('Retail')}
                 </Link>
               </li>
               <li>
                 <Link href="/directory?category=Professional" className="hover:text-amber-300 transition-colors">
-                  CA, Audit & Legal Counsel
+                  {t('Professional')}
                 </Link>
               </li>
               <li>
                 <Link href="/directory?category=Distribution" className="hover:text-amber-300 transition-colors">
-                  Logistics & Warehousing
+                  {t('Distribution')}
                 </Link>
               </li>
               <li>
                 <Link href="/directory?category=Service+Provider" className="hover:text-amber-300 transition-colors">
-                  Hospitals & Healthcare
+                  {t('Service Provider')}
                 </Link>
               </li>
             </ul>
@@ -128,37 +122,22 @@ export const Footer: React.FC = () => {
           {/* Chamber Column */}
           <div>
             <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4 border-b border-amber-400/20 pb-2">
-              The Chamber
+              {t('The Chamber')}
             </h4>
             <ul className="space-y-2 text-xs">
               <li>
-                <Link href="/about" className="hover:text-amber-300 transition-colors">
-                  About ACCI Legacy
-                </Link>
-              </li>
-              <li>
-                <Link href="/committee" className="hover:text-amber-300 transition-colors">
-                  Executive Committee
-                </Link>
-              </li>
-              <li>
                 <Link href="/events" className="hover:text-amber-300 transition-colors">
-                  Conclaves & Seminars
+                  {t('Conclaves & Seminars')}
                 </Link>
               </li>
               <li>
-                <Link href="/news" className="hover:text-amber-300 transition-colors">
-                  Trade Advisories & Circulars
+                <Link href="/gallery" className="hover:text-amber-300 transition-colors">
+                  {t('Event Photo Archives')}
                 </Link>
               </li>
               <li>
                 <Link href="/jobs" className="hover:text-amber-300 transition-colors">
-                  Employment Board
-                </Link>
-              </li>
-              <li>
-                <Link href="/membership" className="hover:text-amber-300 transition-colors">
-                  Membership Benefits & Tiers
+                  {t('Employment Board')}
                 </Link>
               </li>
             </ul>
@@ -167,37 +146,37 @@ export const Footer: React.FC = () => {
           {/* Member Portal & Security */}
           <div>
             <h4 className="text-xs font-bold text-white uppercase tracking-wider mb-4 border-b border-amber-400/20 pb-2">
-              Members & Portal
+              {t('Members & Portal')}
             </h4>
             <ul className="space-y-2 text-xs">
               <li>
                 <Link href="/login" className="hover:text-amber-300 transition-colors">
-                  Member Login
+                  {t('Member Login')}
                 </Link>
               </li>
               <li>
                 <Link href="/membership" className="hover:text-amber-300 transition-colors">
-                  New Business Listing
+                  {t('New Business Listing')}
                 </Link>
               </li>
               <li>
                 <Link href="/dashboard" className="hover:text-amber-300 transition-colors">
-                  Listing Management
+                  {t('Listing Management')}
                 </Link>
               </li>
               <li>
                 <Link href="/admin" className="hover:text-amber-300 transition-colors">
-                  Chamber Admin Access
+                  {t('Chamber Admin Access')}
                 </Link>
               </li>
               <li>
                 <Link href="/terms" className="hover:text-amber-300 transition-colors">
-                  Constitution & Bylaws
+                  {t('Constitution & Bylaws')}
                 </Link>
               </li>
               <li>
                 <Link href="/privacy" className="hover:text-amber-300 transition-colors">
-                  Privacy Policy
+                  {t('Privacy Policy')}
                 </Link>
               </li>
             </ul>
@@ -209,19 +188,19 @@ export const Footer: React.FC = () => {
       <div className="border-t border-white/10 bg-[#020719] px-4 py-5 text-xs text-slate-400">
         <div className="mx-auto max-w-7xl flex flex-col md:flex-row items-center justify-between gap-3">
           <div>
-            © {new Date().getFullYear()} Agrawal Chamber of Commerce & Industries (ACCI), Jabalpur. All rights reserved.
+            © {new Date().getFullYear()} {t('Agrawal Chamber of Commerce & Industries')}, Jabalpur. {t('All rights reserved.')}
           </div>
           <div className="flex flex-wrap items-center gap-4 text-xs">
             <Link href="/terms" className="hover:text-white transition-colors">
-              Terms & Conditions
+              {t('Terms & Conditions')}
             </Link>
             <span>•</span>
             <Link href="/privacy" className="hover:text-white transition-colors">
-              Privacy Policy
+              {t('Privacy Policy')}
             </Link>
             <span>•</span>
             <span className="text-amber-400/90 font-medium">
-              Powered by Appwrite Backend
+              {t('Powered by Appwrite Backend')}
             </span>
           </div>
         </div>

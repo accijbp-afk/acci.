@@ -8,6 +8,7 @@ import { authService } from '@/services/appwrite/auth';
 import { membersService } from '@/services/appwrite/members';
 import { jobsService } from '@/services/appwrite/jobs';
 import { UserProfile, MemberBusiness, JobListing } from '@/types';
+import { getBusinessBanner, getIndustryFallbackImage } from '@/utils/businessImage';
 import {
   User,
   Building2,
@@ -21,6 +22,10 @@ import {
   MapPin,
   LogOut,
   ExternalLink,
+  Upload,
+  Camera,
+  Check,
+  RefreshCw,
 } from 'lucide-react';
 
 export default function MemberDashboard() {
@@ -30,6 +35,11 @@ export default function MemberDashboard() {
   const [myBusiness, setMyBusiness] = useState<MemberBusiness | null>(null);
   const [myJobs, setMyJobs] = useState<JobListing[]>([]);
   const [loading, setLoading] = useState(true);
+
+  const [bannerInputUrl, setBannerInputUrl] = useState('');
+  const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [savingBanner, setSavingBanner] = useState(false);
+  const [bannerSuccess, setBannerSuccess] = useState(false);
 
   useEffect(() => {
     authService.getCurrentUser().then((currentUser) => {
@@ -57,6 +67,57 @@ export default function MemberDashboard() {
       setLoading(false);
     });
   }, [router]);
+
+  const handleBannerFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) {
+        alert('Please choose an image under 2MB.');
+        return;
+      }
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        const result = reader.result as string;
+        setBannerPreview(result);
+        setBannerInputUrl(result);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const handleSaveBanner = async () => {
+    if (!myBusiness) return;
+    setSavingBanner(true);
+    const targetUrl = bannerInputUrl.trim() || bannerPreview || '';
+    const updated = await membersService.updateMember(myBusiness.id, {
+      bannerUrl: targetUrl,
+      workPhotos: targetUrl ? [targetUrl] : [],
+    });
+    if (updated) {
+      setMyBusiness(updated);
+      setBannerSuccess(true);
+      setBannerPreview(null);
+      setTimeout(() => setBannerSuccess(false), 3500);
+    }
+    setSavingBanner(false);
+  };
+
+  const handleResetToFallback = async () => {
+    if (!myBusiness) return;
+    setSavingBanner(true);
+    const updated = await membersService.updateMember(myBusiness.id, {
+      bannerUrl: '',
+      workPhotos: [],
+    });
+    if (updated) {
+      setMyBusiness(updated);
+      setBannerInputUrl('');
+      setBannerPreview(null);
+      setBannerSuccess(true);
+      setTimeout(() => setBannerSuccess(false), 3500);
+    }
+    setSavingBanner(false);
+  };
 
   const handleLogout = async () => {
     await authService.logout();
@@ -264,6 +325,114 @@ export default function MemberDashboard() {
                   <div>
                     <strong className="block text-slate-500 text-[10px] uppercase font-bold">Operating Hours</strong>
                     <span>{myBusiness.timing}</span>
+                  </div>
+                </div>
+
+                {/* Enterprise Display Banner Manager */}
+                <div className="rounded-xl border border-slate-200 bg-stone-50/80 p-5 mb-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 mb-4">
+                    <div>
+                      <h4 className="font-serif-heading text-sm font-bold text-[#07174a]">
+                        Enterprise Display Banner / Photo
+                      </h4>
+                      <p className="text-xs text-slate-500 mt-0.5">
+                        This image appears on your directory card and company profile. If left empty, an official image corresponding to your industry ({myBusiness.industry}) is automatically displayed.
+                      </p>
+                    </div>
+                    <div>
+                      {myBusiness.bannerUrl ? (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 text-emerald-800 px-2.5 py-0.5 text-[10px] font-bold">
+                          <Check className="h-3 w-3" />
+                          Custom Banner Active
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-1 rounded-full bg-amber-100 text-amber-800 px-2.5 py-0.5 text-[10px] font-bold">
+                          Industry Fallback Active
+                        </span>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Banner Live Preview */}
+                  <div className="relative h-44 sm:h-52 w-full rounded-xl overflow-hidden border border-stone-300 bg-stone-900 mb-4 shadow-inner">
+                    <Image
+                      src={bannerPreview || getBusinessBanner(myBusiness)}
+                      alt={myBusiness.businessName}
+                      fill
+                      className="object-cover"
+                    />
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
+                    <div className="absolute bottom-3 left-3 text-white">
+                      <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-400 text-[#07174a] px-2 py-0.5 rounded">
+                        {myBusiness.industry}
+                      </span>
+                      <div className="font-serif-heading font-bold text-sm mt-0.5">
+                        {myBusiness.businessName}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Upload Controls */}
+                  <div className="space-y-3">
+                    <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                      <label className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-lg bg-white border border-stone-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs shrink-0">
+                        <Camera className="h-4 w-4 text-[#1540a8]" />
+                        <span>Upload Banner File</span>
+                        <input
+                          type="file"
+                          accept="image/*"
+                          onChange={handleBannerFileUpload}
+                          className="hidden"
+                        />
+                      </label>
+
+                      <div className="flex-1 flex items-center">
+                        <input
+                          type="text"
+                          value={bannerInputUrl.startsWith('data:') ? '' : bannerInputUrl}
+                          onChange={(e) => {
+                            setBannerInputUrl(e.target.value);
+                            setBannerPreview(e.target.value.trim() || null);
+                          }}
+                          placeholder={bannerInputUrl.startsWith('data:') ? 'Local image selected for upload' : 'Or paste direct image URL (https://…)'}
+                          className="w-full rounded-lg bg-white border border-stone-300 px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#1540a8]"
+                        />
+                      </div>
+
+                      <button
+                        onClick={handleSaveBanner}
+                        disabled={savingBanner || (!bannerInputUrl && !bannerPreview)}
+                        className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#1540a8] hover:bg-[#07174a] text-white px-5 py-2 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shrink-0"
+                      >
+                        {savingBanner ? (
+                          <span>Saving…</span>
+                        ) : (
+                          <>
+                            <Upload className="h-3.5 w-3.5" />
+                            <span>Save Banner</span>
+                          </>
+                        )}
+                      </button>
+
+                      {(myBusiness.bannerUrl || (myBusiness.workPhotos && myBusiness.workPhotos.length > 0)) && (
+                        <button
+                          onClick={handleResetToFallback}
+                          disabled={savingBanner}
+                          className="inline-flex items-center justify-center gap-1 rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 px-3 py-2 text-xs font-bold transition-colors cursor-pointer shrink-0"
+                          title="Clear custom banner and revert to industry fallback"
+                        >
+                          <RefreshCw className="h-3 w-3" />
+                          <span>Reset to Industry Image</span>
+                        </button>
+                      )}
+                    </div>
+
+                    {bannerSuccess && (
+                      <div className="rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs px-3 py-2 font-medium flex items-center gap-2 animate-in fade-in">
+                        <Check className="h-4 w-4 text-emerald-600" />
+                        <span>Enterprise banner updated successfully! It will now be shown across directory and homepage.</span>
+                      </div>
+                    )}
                   </div>
                 </div>
 

@@ -7,6 +7,7 @@ import Image from 'next/image';
 import { membersService } from '@/services/appwrite/members';
 import { SEED_CATEGORIES, SEED_INDUSTRIES } from '@/services/seedData';
 import { MemberBusiness, BusinessReview } from '@/types';
+import { getBusinessBanner } from '@/utils/businessImage';
 import {
   Search,
   CheckCircle2,
@@ -244,10 +245,7 @@ function DirectoryContent() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {members.map((biz) => {
-              const photo =
-                biz.workPhotos && biz.workPhotos[0]
-                  ? biz.workPhotos[0]
-                  : 'https://images.unsplash.com/photo-1542838132-92c53300491e?auto=format&fit=crop&w=600&q=80';
+              const photo = getBusinessBanner(biz);
 
               return (
                 <div
@@ -371,8 +369,13 @@ function DirectoryContent() {
             </button>
 
             <div className="flex items-start gap-4 mb-4">
-              <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-xl bg-[#07174a] font-serif text-2xl font-bold text-amber-400">
-                {activeModalMember.businessName.charAt(0)}
+              <div className="relative h-16 w-16 shrink-0 rounded-xl overflow-hidden border border-amber-400 bg-stone-100">
+                <Image
+                  src={getBusinessBanner(activeModalMember)}
+                  alt={activeModalMember.businessName}
+                  fill
+                  className="object-cover"
+                />
               </div>
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 px-2 py-0.5 rounded border border-blue-100">

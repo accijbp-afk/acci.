@@ -44,6 +44,7 @@ export interface MemberBusiness {
   rating: number;
   reviewCount: number;
   workPhotos?: string[];
+  bannerUrl?: string;
   logoUrl?: string;
   joinedAt: string;
 }
@@ -146,3 +147,19 @@ export interface CommitteeLeader {
   email?: string;
   linkedin?: string;
 }
+
+export interface GalleryAlbum {
+  $id?: string;
+  id: string;
+  title: string;
+  category: string;
+  date: string;
+  venue?: string;
+  coverUrl: string;
+  photoCount?: number;
+  description: string;
+  photos?: string[];
+  status?: 'concluded' | 'archived';
+  createdAt?: string;
+}
+
