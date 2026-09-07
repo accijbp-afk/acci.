@@ -3,7 +3,7 @@ import { databases, APPWRITE_CONFIG, isAppwriteConfigured } from './client';
 import { JobListing } from '@/types';
 import { SEED_JOBS } from '../seedData';
 
-const LOCAL_STORAGE_JOBS_KEY = 'acci_jobs_data';
+const LOCAL_STORAGE_JOBS_KEY = 'acci_jobs_data_v2';
 
 const getLocalJobs = (): JobListing[] => {
   if (typeof window === 'undefined') return SEED_JOBS;

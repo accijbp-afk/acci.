@@ -3,7 +3,7 @@ import { databases, APPWRITE_CONFIG, isAppwriteConfigured } from './client';
 import { ChamberNews } from '@/types';
 import { SEED_NEWS } from '../seedData';
 
-const LOCAL_STORAGE_NEWS_KEY = 'acci_news_data';
+const LOCAL_STORAGE_NEWS_KEY = 'acci_news_data_v2';
 
 const getLocalNews = (): ChamberNews[] => {
   if (typeof window === 'undefined') return SEED_NEWS;

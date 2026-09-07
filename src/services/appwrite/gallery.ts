@@ -1,7 +1,7 @@
 import { GalleryAlbum } from '@/types';
 import { SEED_GALLERY } from '../seedData';
 
-const LOCAL_STORAGE_GALLERY_KEY = 'acci_gallery_data';
+const LOCAL_STORAGE_GALLERY_KEY = 'acci_gallery_data_v2';
 
 const getLocalGallery = (): GalleryAlbum[] => {
   if (typeof window === 'undefined') return SEED_GALLERY;

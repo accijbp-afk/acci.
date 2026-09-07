@@ -3,7 +3,7 @@ import { databases, APPWRITE_CONFIG, isAppwriteConfigured } from './client';
 import { ChamberEvent } from '@/types';
 import { SEED_EVENTS } from '../seedData';
 
-const LOCAL_STORAGE_EVENTS_KEY = 'acci_events_data';
+const LOCAL_STORAGE_EVENTS_KEY = 'acci_events_data_v2';
 
 const getLocalEvents = (): ChamberEvent[] => {
   if (typeof window === 'undefined') return SEED_EVENTS;

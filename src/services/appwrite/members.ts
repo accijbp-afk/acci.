@@ -3,8 +3,8 @@ import { databases, APPWRITE_CONFIG, isAppwriteConfigured } from './client';
 import { MemberBusiness, BusinessReview } from '@/types';
 import { SEED_MEMBERS, SEED_REVIEWS } from '../seedData';
 
-const LOCAL_STORAGE_MEMBERS_KEY = 'acci_members_data';
-const LOCAL_STORAGE_REVIEWS_KEY = 'acci_reviews_data';
+const LOCAL_STORAGE_MEMBERS_KEY = 'acci_members_data_v2';
+const LOCAL_STORAGE_REVIEWS_KEY = 'acci_reviews_data_v2';
 
 const getLocalMembers = (): MemberBusiness[] => {
   if (typeof window === 'undefined') return SEED_MEMBERS;
