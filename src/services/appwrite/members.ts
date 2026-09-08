@@ -47,6 +47,74 @@ const getLocalReviews = (): BusinessReview[] => {
   }
 };
 
+const ALLOWED_MEMBER_KEYS = new Set([
+  'id',
+  'userId',
+  'businessName',
+  'legalName',
+  'ownerName',
+  'incomeType',
+  'category',
+  'industry',
+  'description',
+  'tagline',
+  'phone',
+  'whatsapp',
+  'email',
+  'website',
+  'social',
+  'address',
+  'city',
+  'pinCode',
+  'maps',
+  'timing',
+  'gst',
+  'estYear',
+  'employees',
+  'services',
+  'products',
+  'plan',
+  'status',
+  'featured',
+  'rating',
+  'reviewCount',
+  'workPhotos',
+  'logoUrl',
+  'joinedAt',
+]);
+
+function sanitizeMemberPayload(data: Record<string, any>): Record<string, any> {
+  const sanitized: Record<string, any> = {};
+
+  let desc = data.description || '';
+  if (data.detailed && !desc.includes(data.detailed)) {
+    desc = desc ? `${desc}\n\nAdditional Details: ${data.detailed}` : data.detailed;
+  }
+
+  for (const [key, val] of Object.entries(data)) {
+    if (ALLOWED_MEMBER_KEYS.has(key) && val !== undefined && val !== null) {
+      sanitized[key] = val;
+    }
+  }
+
+  sanitized.description = desc || 'Chamber member business in Jabalpur';
+  sanitized.businessName = sanitized.businessName || 'Business Enterprise';
+  sanitized.ownerName = sanitized.ownerName || 'Business Owner';
+  sanitized.category = sanitized.category || 'Manufacturing';
+  sanitized.industry = sanitized.industry || 'General Trade';
+  sanitized.phone = sanitized.phone || '+91 8319565363';
+  sanitized.address = sanitized.address || 'Jabalpur, MP';
+  sanitized.city = sanitized.city || 'Jabalpur';
+  sanitized.plan = sanitized.plan || 'Free';
+  sanitized.status = sanitized.status || 'pending';
+  sanitized.featured = Boolean(sanitized.featured);
+  sanitized.rating = Number(sanitized.rating) || 0;
+  sanitized.reviewCount = Number(sanitized.reviewCount) || 0;
+  sanitized.joinedAt = sanitized.joinedAt || new Date().toISOString().split('T')[0];
+
+  return sanitized;
+}
+
 export const membersService = {
   async getMembers(params?: {
     search?: string;
@@ -88,6 +156,17 @@ export const membersService = {
         );
 
         let docs = res.documents as unknown as MemberBusiness[];
+
+        // Merge any locally pending submissions so newly created members show up immediately
+        const local = getLocalMembers();
+        for (const loc of local) {
+          if (!docs.some((d) => d.id === loc.id || d.$id === loc.id || (d.businessName === loc.businessName && d.phone === loc.phone))) {
+            if (statusFilter === 'all' || loc.status === statusFilter) {
+              docs.unshift(loc);
+            }
+          }
+        }
+
         if (params?.search) {
           const s = params.search.toLowerCase();
           docs = docs.filter(
@@ -100,7 +179,7 @@ export const membersService = {
           );
         }
 
-        return { members: docs, total: res.total };
+        return { members: docs, total: Math.max(docs.length, res.total) };
       } catch (err) {
         console.warn('Appwrite fetch members error, using local fallback', err);
       }
@@ -172,15 +251,20 @@ export const membersService = {
 
     if (isAppwriteConfigured()) {
       try {
+        const payload = sanitizeMemberPayload(newMember);
         const res = await databases.createDocument(
           APPWRITE_CONFIG.databaseId,
           APPWRITE_CONFIG.collections.members,
           ID.unique(),
-          newMember
+          payload
         );
-        return res as unknown as MemberBusiness;
+        const created = { ...newMember, ...res, id: res.id || newMember.id } as unknown as MemberBusiness;
+        const local = getLocalMembers();
+        local.unshift(created);
+        saveLocalMembers(local);
+        return created;
       } catch (err) {
-        console.warn('Appwrite create member error, saved locally', err);
+        console.error('Appwrite create member error:', err);
       }
     }
 
@@ -193,14 +277,32 @@ export const membersService = {
   async updateMemberStatus(id: string, status: 'approved' | 'rejected' | 'pending'): Promise<boolean> {
     if (isAppwriteConfigured()) {
       try {
-        await databases.updateDocument(
-          APPWRITE_CONFIG.databaseId,
-          APPWRITE_CONFIG.collections.members,
-          id,
-          { status }
-        );
-      } catch {
-        // Continue to local
+        let docId = id;
+        try {
+          await databases.updateDocument(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.members,
+            docId,
+            { status }
+          );
+        } catch {
+          // If id was custom VND_ id, search for document by id field
+          const found = await databases.listDocuments(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.members,
+            [Query.equal('id', id)]
+          );
+          if (found.documents.length > 0) {
+            await databases.updateDocument(
+              APPWRITE_CONFIG.databaseId,
+              APPWRITE_CONFIG.collections.members,
+              found.documents[0].$id,
+              { status }
+            );
+          }
+        }
+      } catch (err) {
+        console.warn('Appwrite update status notice:', err);
       }
     }
 
@@ -217,14 +319,31 @@ export const membersService = {
   async toggleFeatured(id: string, featured: boolean): Promise<boolean> {
     if (isAppwriteConfigured()) {
       try {
-        await databases.updateDocument(
-          APPWRITE_CONFIG.databaseId,
-          APPWRITE_CONFIG.collections.members,
-          id,
-          { featured }
-        );
-      } catch {
-        // Continue
+        let docId = id;
+        try {
+          await databases.updateDocument(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.members,
+            docId,
+            { featured }
+          );
+        } catch {
+          const found = await databases.listDocuments(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.members,
+            [Query.equal('id', id)]
+          );
+          if (found.documents.length > 0) {
+            await databases.updateDocument(
+              APPWRITE_CONFIG.databaseId,
+              APPWRITE_CONFIG.collections.members,
+              found.documents[0].$id,
+              { featured }
+            );
+          }
+        }
+      } catch (err) {
+        console.warn('Appwrite toggle featured notice:', err);
       }
     }
 
@@ -241,14 +360,32 @@ export const membersService = {
   async updateMember(id: string, updates: Partial<MemberBusiness>): Promise<MemberBusiness | null> {
     if (isAppwriteConfigured()) {
       try {
-        await databases.updateDocument(
-          APPWRITE_CONFIG.databaseId,
-          APPWRITE_CONFIG.collections.members,
-          id,
-          updates
-        );
-      } catch {
-        // Continue to local
+        const payload = sanitizeMemberPayload(updates);
+        let docId = id;
+        try {
+          await databases.updateDocument(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.members,
+            docId,
+            payload
+          );
+        } catch {
+          const found = await databases.listDocuments(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.members,
+            [Query.equal('id', id)]
+          );
+          if (found.documents.length > 0) {
+            await databases.updateDocument(
+              APPWRITE_CONFIG.databaseId,
+              APPWRITE_CONFIG.collections.members,
+              found.documents[0].$id,
+              payload
+            );
+          }
+        }
+      } catch (err) {
+        console.warn('Appwrite update member notice:', err);
       }
     }
 

@@ -55,11 +55,12 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'vendors' | 'events' | 'gallery' | 'news' | 'jobs' | 'inquiries' | 'reviews' | 'legal'
+    'overview' | 'vendors' | 'accounts' | 'events' | 'gallery' | 'news' | 'jobs' | 'inquiries' | 'reviews' | 'legal'
   >('overview');
 
   // Data states
   const [vendors, setVendors] = useState<MemberBusiness[]>([]);
+  const [usersList, setUsersList] = useState<UserProfile[]>([]);
   const [events, setEvents] = useState<ChamberEvent[]>([]);
   const [albums, setAlbums] = useState<GalleryAlbum[]>([]);
   const [news, setNews] = useState<ChamberNews[]>([]);
@@ -117,7 +118,7 @@ export default function AdminDashboard() {
 
   const loadAllData = async () => {
     setLoading(true);
-    const [vRes, evRes, nRes, jRes, inqRes, revRes, galRes] = await Promise.all([
+    const [vRes, evRes, nRes, jRes, inqRes, revRes, galRes, uList] = await Promise.all([
       membersService.getMembers({ status: 'all' }),
       eventsService.getEvents(),
       newsService.getNews(),
@@ -125,6 +126,7 @@ export default function AdminDashboard() {
       inquiriesService.getInquiries(),
       membersService.getAllReviewsAdmin(),
       galleryService.getAlbums(),
+      authService.getUsers(),
     ]);
 
     setVendors(vRes.members);
@@ -134,6 +136,7 @@ export default function AdminDashboard() {
     setInquiries(inqRes);
     setReviews(revRes);
     setAlbums(galRes);
+    setUsersList(uList || []);
     try {
       const lDoc = await legalService.getLegalContent(activeLegalDoc);
       setLegalDoc(lDoc);
@@ -516,7 +519,8 @@ export default function AdminDashboard() {
         <div className="mx-auto max-w-7xl flex items-center gap-1 overflow-x-auto px-4 sm:px-6 py-2">
           {[
             { id: 'overview', label: 'Overview', icon: Building2 },
-            { id: 'vendors', label: `Enterprises (${vendors.length})`, icon: Users },
+            { id: 'vendors', label: `Enterprises (${vendors.length})`, icon: Building2 },
+            { id: 'accounts', label: `User Accounts (${usersList.length})`, icon: Users },
             { id: 'events', label: `Events (${events.length})`, icon: Calendar },
             { id: 'gallery', label: `Gallery (${albums.length})`, icon: Images },
             { id: 'news', label: `Circulars (${news.length})`, icon: Newspaper },
@@ -754,7 +758,73 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 3: EVENTS MANAGEMENT */}
+        {/* TAB: REGISTERED USER ACCOUNTS */}
+        {activeTab === 'accounts' && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h2 className="font-serif-heading text-lg font-bold text-[#07174a]">
+                  Registered Member &amp; User Accounts ({usersList.length})
+                </h2>
+                <p className="text-xs text-slate-500">
+                  Individual accounts created through Member Sign Up / Portal Registration.
+                </p>
+              </div>
+            </div>
+
+            {usersList.length === 0 ? (
+              <div className="text-center py-12 text-slate-400 text-xs">
+                No user accounts registered yet.
+              </div>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left text-xs text-slate-700">
+                  <thead className="bg-slate-50 text-slate-500 uppercase text-[10px] border-b border-slate-200">
+                    <tr>
+                      <th className="p-3">Member Name</th>
+                      <th className="p-3">Email Address</th>
+                      <th className="p-3">Phone</th>
+                      <th className="p-3">City</th>
+                      <th className="p-3">Account Role</th>
+                      <th className="p-3">Registered On</th>
+                      <th className="p-3 text-right">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100">
+                    {usersList.map((u, idx) => (
+                      <tr key={u.userId || idx} className="hover:bg-slate-50">
+                        <td className="p-3 font-bold text-[#07174a]">{u.name}</td>
+                        <td className="p-3 font-medium text-slate-800">{u.email}</td>
+                        <td className="p-3 font-mono text-slate-600">{u.phone || '—'}</td>
+                        <td className="p-3 text-slate-600">{u.city || 'Jabalpur'}</td>
+                        <td className="p-3">
+                          <span
+                            className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                              u.role === 'admin'
+                                ? 'bg-purple-50 text-purple-700 border border-purple-200'
+                                : 'bg-blue-50 text-blue-700 border border-blue-200'
+                            }`}
+                          >
+                            {u.role}
+                          </span>
+                        </td>
+                        <td className="p-3 text-slate-400 font-mono text-[11px]">
+                          {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : '—'}
+                        </td>
+                        <td className="p-3 text-right">
+                          <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-emerald-600">
+                            <CheckCircle className="h-3 w-3" />
+                            Active
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </div>
+        )}
         {activeTab === 'events' && (
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <div className="flex items-center justify-between pb-4 border-b border-slate-200 mb-6">

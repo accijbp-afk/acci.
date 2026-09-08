@@ -35,12 +35,22 @@ export const authService = {
             userId,
             profile
           );
-        } catch {
-          // If collection doesn't exist yet, continue with session
+        } catch (e) {
+          console.warn('Appwrite save user doc notice:', e);
         }
 
         if (typeof window !== 'undefined') {
           localStorage.setItem(LOCAL_STORAGE_USER_KEY, JSON.stringify(profile));
+          try {
+            const stored = localStorage.getItem('acci_registered_users_list');
+            const list: UserProfile[] = stored ? JSON.parse(stored) : [];
+            if (!list.some((u) => u.email === profile.email)) {
+              list.unshift(profile);
+              localStorage.setItem('acci_registered_users_list', JSON.stringify(list));
+            }
+          } catch {
+            // Ignore
+          }
         }
 
         return profile;
@@ -199,5 +209,40 @@ export const authService = {
     if (typeof window !== 'undefined') {
       localStorage.removeItem(LOCAL_STORAGE_USER_KEY);
     }
+  },
+
+  async getUsers(): Promise<UserProfile[]> {
+    if (isAppwriteConfigured()) {
+      try {
+        const res = await databases.listDocuments(
+          APPWRITE_CONFIG.databaseId,
+          APPWRITE_CONFIG.collections.users,
+          []
+        );
+        const docs = res.documents as unknown as UserProfile[];
+        if (typeof window !== 'undefined') {
+          const stored = localStorage.getItem('acci_registered_users_list');
+          if (stored) {
+            try {
+              const localList: UserProfile[] = JSON.parse(stored);
+              for (const loc of localList) {
+                if (!docs.some((d) => d.email === loc.email || d.userId === loc.userId)) {
+                  docs.unshift(loc);
+                }
+              }
+            } catch {
+              // Ignore
+            }
+          }
+        }
+        return docs;
+      } catch (err) {
+        console.warn('Appwrite fetch users notice:', err);
+      }
+    }
+
+    if (typeof window === 'undefined') return [];
+    const stored = localStorage.getItem('acci_registered_users_list');
+    return stored ? JSON.parse(stored) : [];
   },
 };
