@@ -2,6 +2,7 @@
 
 import React, { useState } from 'react';
 import { inquiriesService } from '@/services/appwrite/inquiries';
+import { notificationService } from '@/services/notifications';
 import { Phone, Mail, CheckCircle2 } from 'lucide-react';
 
 export default function ContactPage() {
@@ -21,6 +22,39 @@ export default function ContactPage() {
     try {
       await inquiriesService.submitContact(form);
       setSuccess(true);
+
+      // Notify Secretariat Admin at accjbp@gmail.com
+      notificationService.notifyAdmin({
+        event: 'INQUIRY_SUBMITTED',
+        title: `New Secretariat Inquiry: ${form.subject}`,
+        subtitle: `A public communication has been submitted via the ACCI Contact Desk.`,
+        details: [
+          { label: 'Sender Name', value: form.name },
+          { label: 'Email Address', value: form.email },
+          { label: 'Phone Number', value: form.phone || 'Not provided' },
+          { label: 'Subject Matter', value: form.subject },
+          { label: 'Message Content', value: form.message },
+        ],
+        actionUrl: '/admin',
+      });
+
+      // Send Acknowledgment to Sender
+      if (form.email) {
+        notificationService.notifyMember(form.email, {
+          event: 'INQUIRY_ACKNOWLEDGED',
+          title: `We have received your message, ${form.name}`,
+          subtitle: `Thank you for contacting the Agrawal Chamber of Commerce & Industries (ACCI) Jabalpur Secretariat.`,
+          details: [
+            { label: 'Subject Reference', value: form.subject },
+            { label: 'Contact Phone', value: form.phone || 'N/A' },
+            { label: 'Inquiry Status', value: 'Forwarded to Secretariat Officer' },
+            { label: 'Response Window', value: 'Within 24–48 working hours' },
+          ],
+          actionText: 'Visit ACCI Portal',
+          actionUrl: '/',
+        });
+      }
+
       setForm({
         name: '',
         email: '',

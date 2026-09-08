@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { membersService } from '@/services/appwrite/members';
+import { notificationService } from '@/services/notifications';
 import { SEED_CATEGORIES, SEED_INDUSTRIES } from '@/services/seedData';
 
 export default function MembershipPage() {
@@ -75,6 +76,43 @@ export default function MembershipPage() {
       });
 
       setSubmittedId(res.id);
+
+      // Notify Secretariat Admin at accjbp@gmail.com
+      notificationService.notifyAdmin({
+        event: 'MEMBERSHIP_APPLICATION',
+        title: `New Business Membership Application: ${form.businessName}`,
+        subtitle: `A new enterprise has applied for inclusion in the ACCI Chamber Directory.`,
+        details: [
+          { label: 'Business Name', value: form.businessName },
+          { label: 'Proprietor / Owner', value: form.ownerName },
+          { label: 'Category & Sector', value: `${form.category} (${form.industry})` },
+          { label: 'Contact Phone', value: form.phone },
+          { label: 'Business Email', value: form.email || 'Not provided' },
+          { label: 'City & Pincode', value: `${form.city}, ${form.pinCode}` },
+          { label: 'GSTIN Number', value: form.gst || 'None / Unregistered' },
+          { label: 'Membership Plan', value: form.plan },
+          { label: 'Application ID', value: res.id },
+        ],
+        actionUrl: '/admin',
+      });
+
+      // Notify Applicant if email was provided
+      if (form.email) {
+        notificationService.notifyMember(form.email, {
+          event: 'APPLICATION_RECEIVED',
+          title: `Application Received: ${form.businessName}`,
+          subtitle: `Thank you for applying for ACCI Chamber Directory listing. Your application has been submitted to the Secretariat for verification.`,
+          details: [
+            { label: 'Enterprise Name', value: form.businessName },
+            { label: 'Proprietor', value: form.ownerName },
+            { label: 'Classification', value: form.category },
+            { label: 'Application ID', value: res.id },
+            { label: 'Next Step', value: 'Secretariat verification and approval within 24–48 hours' },
+          ],
+          actionText: 'Explore Chamber Directory',
+          actionUrl: '/directory',
+        });
+      }
     } catch (err: unknown) {
       setErrorMsg(err instanceof Error ? err.message : 'Submission failed. Please check inputs.');
     } finally {

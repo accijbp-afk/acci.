@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import Image from 'next/image';
 import { membersService } from '@/services/appwrite/members';
+import { notificationService } from '@/services/notifications';
 import { SEED_CATEGORIES, SEED_INDUSTRIES } from '@/services/seedData';
 import { MemberBusiness, BusinessReview } from '@/types';
 import { getBusinessBanner } from '@/utils/businessImage';
@@ -92,6 +93,38 @@ function DirectoryContent() {
       rating: reviewRating,
       reviewText,
     });
+
+    // Notify Secretariat Admin at accjbp@gmail.com
+    notificationService.notifyAdmin({
+      event: 'REVIEW_SUBMITTED',
+      title: `New Review for ${targetVendor.businessName}`,
+      subtitle: `${reviewerName} submitted a ${reviewRating}★ review.`,
+      details: [
+        { label: 'Target Business', value: targetVendor.businessName },
+        { label: 'Reviewer Name', value: reviewerName },
+        { label: 'Star Rating', value: `${reviewRating} / 5 Stars` },
+        { label: 'Review Text', value: reviewText },
+        { label: 'Proprietor Contact', value: targetVendor.phone },
+      ],
+      actionUrl: '/admin',
+    });
+
+    // Notify Member if business email exists
+    if (targetVendor.email) {
+      notificationService.notifyMember(targetVendor.email, {
+        event: 'NEW_REVIEW_RECEIVED',
+        title: `New ${reviewRating}★ Review Received: ${targetVendor.businessName}`,
+        subtitle: `A chamber peer or customer has left feedback on your ACCI Chamber listing.`,
+        details: [
+          { label: 'Reviewer', value: reviewerName },
+          { label: 'Rating Given', value: `${reviewRating} out of 5 Stars` },
+          { label: 'Review Content', value: `"${reviewText}"` },
+          { label: 'Chamber Listing', value: targetVendor.businessName },
+        ],
+        actionText: 'View in Chamber Directory',
+        actionUrl: '/directory',
+      });
+    }
 
     setReviewSuccess(true);
     setTimeout(() => {

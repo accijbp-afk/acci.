@@ -44,8 +44,11 @@ import {
   Save,
   RotateCcw,
   Check,
+  Edit3,
+  X,
 } from 'lucide-react';
 import { legalService } from '@/services/appwrite/legal';
+import { notificationService } from '@/services/notifications';
 import { LegalContentRenderer } from '@/components/common/LegalContentRenderer';
 
 export default function AdminDashboard() {
@@ -71,6 +74,12 @@ export default function AdminDashboard() {
   const [legalLoading, setLegalLoading] = useState(false);
   const [legalSaving, setLegalSaving] = useState(false);
   const [legalSaveSuccess, setLegalSaveSuccess] = useState(false);
+
+  // Member Profile Editing State
+  const [editingMember, setEditingMember] = useState<MemberBusiness | null>(null);
+  const [editMemberForm, setEditMemberForm] = useState<Partial<MemberBusiness>>({});
+  const [savingMember, setSavingMember] = useState(false);
+  const [editMemberSuccess, setEditMemberSuccess] = useState(false);
 
   // New Event Form State
   const [showAddEventModal, setShowAddEventModal] = useState(false);
@@ -149,13 +158,160 @@ export default function AdminDashboard() {
   }, [router]);
 
   const handleVendorStatus = async (id: string, status: 'approved' | 'rejected') => {
+    const target = vendors.find((v) => v.id === id || v.$id === id);
     await membersService.updateMemberStatus(id, status);
+
+    // Notify Member if email exists
+    if (target?.email) {
+      if (status === 'approved') {
+        notificationService.notifyMember(target.email, {
+          event: 'ACCOUNT_VERIFIED',
+          title: `Account Verified & Approved: ${target.businessName}`,
+          subtitle: `Congratulations! Your enterprise profile has been verified and officially published in the ACCI Chamber Directory.`,
+          details: [
+            { label: 'Enterprise Name', value: target.businessName },
+            { label: 'Proprietor', value: target.ownerName },
+            { label: 'Category', value: target.category },
+            { label: 'Verification Status', value: 'Active & Verified' },
+          ],
+          actionText: 'View Directory Listing',
+          actionUrl: '/directory',
+        });
+      } else {
+        notificationService.notifyMember(target.email, {
+          event: 'ACCOUNT_REJECTED',
+          title: `Chamber Application Update: ${target.businessName}`,
+          subtitle: `Your enterprise registration has been marked as rejected or requires revisions by the Secretariat.`,
+          details: [
+            { label: 'Enterprise Name', value: target.businessName },
+            { label: 'Status', value: 'Application Declined' },
+            { label: 'Action Required', value: 'Please contact Secretariat Helpdesk to rectify documentation.' },
+          ],
+          actionText: 'Contact Secretariat',
+          actionUrl: '/contact',
+        });
+      }
+    }
+
+    // Notify Admin inbox
+    notificationService.notifyAdmin({
+      event: 'MEMBER_STATUS_CHANGED',
+      title: `Member Status Updated: ${target?.businessName || id} -> ${status.toUpperCase()}`,
+      subtitle: `Secretariat action executed for ${target?.businessName || id}.`,
+      details: [
+        { label: 'Enterprise', value: target?.businessName || id },
+        { label: 'New Status', value: status.toUpperCase() },
+        { label: 'Owner', value: target?.ownerName || '—' },
+        { label: 'Phone', value: target?.phone || '—' },
+      ],
+      actionUrl: '/admin',
+    });
+
     loadAllData();
   };
 
   const handleToggleFeatured = async (id: string, current: boolean) => {
-    await membersService.toggleFeatured(id, !current);
+    const target = vendors.find((v) => v.id === id || v.$id === id);
+    const nextFeatured = !current;
+    await membersService.toggleFeatured(id, nextFeatured);
+
+    if (nextFeatured && target?.email) {
+      notificationService.notifyMember(target.email, {
+        event: 'PROFILE_FEATURED',
+        title: `Congratulations! ${target.businessName} is now Featured!`,
+        subtitle: `Your enterprise has been selected for Chamber Spotlight on the ACCI Jabalpur homepage & featured directory showcase.`,
+        details: [
+          { label: 'Business Name', value: target.businessName },
+          { label: 'Spotlight Placement', value: 'Homepage & Chamber Directory' },
+          { label: 'Classification', value: target.category },
+        ],
+        actionText: 'View Featured Listing',
+        actionUrl: '/',
+      });
+    }
+
     loadAllData();
+  };
+
+  const handleStartEditMember = (member: MemberBusiness) => {
+    setEditingMember(member);
+    setEditMemberForm({
+      businessName: member.businessName,
+      legalName: member.legalName || member.businessName,
+      ownerName: member.ownerName,
+      category: member.category,
+      industry: member.industry,
+      email: member.email || '',
+      phone: member.phone,
+      whatsapp: member.whatsapp || member.phone,
+      address: member.address,
+      city: member.city || 'Jabalpur',
+      pinCode: member.pinCode || '482001',
+      website: member.website || '',
+      gst: member.gst || '',
+      estYear: member.estYear || '2015',
+      employees: member.employees || '5',
+      description: member.description || '',
+      detailed: member.detailed || '',
+      status: member.status,
+      featured: Boolean(member.featured),
+      plan: member.plan || 'Free',
+    });
+    setEditMemberSuccess(false);
+  };
+
+  const handleSaveEditMember = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingMember) return;
+    setSavingMember(true);
+
+    try {
+      await membersService.updateMember(editingMember.id, editMemberForm);
+
+      // Notify Member if email is provided
+      const memberEmail = editMemberForm.email || editingMember.email;
+      if (memberEmail) {
+        notificationService.notifyMember(memberEmail, {
+          event: 'PROFILE_UPDATED',
+          title: `Chamber Profile Updated: ${editMemberForm.businessName || editingMember.businessName}`,
+          subtitle: `Your business profile details were updated by the ACCI Secretariat.`,
+          details: [
+            { label: 'Enterprise Name', value: editMemberForm.businessName || editingMember.businessName },
+            { label: 'Category', value: editMemberForm.category || editingMember.category },
+            { label: 'Contact Phone', value: editMemberForm.phone || editingMember.phone },
+            { label: 'Status', value: (editMemberForm.status || editingMember.status).toUpperCase() },
+          ],
+          actionText: 'View Chamber Directory',
+          actionUrl: '/directory',
+        });
+      }
+
+      // Notify Admin
+      notificationService.notifyAdmin({
+        event: 'MEMBER_PROFILE_EDITED',
+        title: `Admin Edited Member: ${editMemberForm.businessName || editingMember.businessName}`,
+        subtitle: `Administrator modified details for member enterprise ${editingMember.id}.`,
+        details: [
+          { label: 'Business Name', value: editMemberForm.businessName || editingMember.businessName },
+          { label: 'Proprietor', value: editMemberForm.ownerName || editingMember.ownerName },
+          { label: 'Status', value: (editMemberForm.status || editingMember.status).toUpperCase() },
+          { label: 'Member ID', value: editingMember.id },
+        ],
+        actionUrl: '/admin',
+      });
+
+      setEditMemberSuccess(true);
+      setTimeout(() => {
+        setEditingMember(null);
+        setEditMemberSuccess(false);
+        loadAllData();
+      }, 1200);
+    } catch (err) {
+      console.error('Save member edit error:', err);
+      alert('Failed to save member profile changes.');
+    } finally {
+      setSavingMember(false);
+    }
   };
 
   const handleCreateEvent = async (e: React.FormEvent) => {
@@ -564,7 +720,15 @@ export default function AdminDashboard() {
                           {v.status}
                         </span>
                       </td>
-                      <td className="p-3 text-right space-x-2">
+                      <td className="p-3 text-right space-x-1.5 whitespace-nowrap">
+                        <button
+                          onClick={() => handleStartEditMember(v)}
+                          className="rounded bg-[#07174a] px-2.5 py-1 text-[11px] font-bold text-white hover:bg-[#1540a8] cursor-pointer inline-flex items-center gap-1 shadow-xs"
+                          title="Edit full member profile"
+                        >
+                          <Edit3 className="h-3 w-3" />
+                          <span>Edit</span>
+                        </button>
                         {v.status !== 'approved' && (
                           <button
                             onClick={() => handleVendorStatus(v.id, 'approved')}
@@ -1485,6 +1649,360 @@ export default function AdminDashboard() {
                 Close Preview
               </button>
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* Modal: Edit Member Profile */}
+      {editingMember && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-3 sm:p-6 backdrop-blur-xs overflow-y-auto">
+          <div className="relative w-full max-w-4xl rounded-2xl bg-white shadow-2xl border border-slate-200 my-8 overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Modal Header */}
+            <div className="bg-[#07174a] text-white p-5 sm:p-6 flex items-start justify-between border-b-4 border-amber-400">
+              <div>
+                <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300 block mb-1">
+                  Secretariat Directory Moderation
+                </span>
+                <h3 className="font-serif-heading text-xl sm:text-2xl font-bold">
+                  Edit Member: {editMemberForm.businessName || editingMember.businessName}
+                </h3>
+                <p className="text-xs text-slate-300 mt-1">
+                  ID: <span className="font-mono text-amber-200">{editingMember.id}</span> &bull; Modify enterprise credentials, contact channels, and chamber status.
+                </p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingMember(null)}
+                className="rounded-full bg-white/10 p-2 text-slate-300 hover:bg-white/20 hover:text-white cursor-pointer transition-colors"
+                title="Close"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Form Body */}
+            <form onSubmit={handleSaveEditMember} className="flex-1 overflow-y-auto p-5 sm:p-8 space-y-6 text-xs text-slate-700">
+              {editMemberSuccess && (
+                <div className="rounded-xl bg-emerald-50 border border-emerald-300 p-4 text-emerald-800 flex items-center gap-3">
+                  <CheckCircle className="h-5 w-5 text-emerald-600 shrink-0" />
+                  <div>
+                    <p className="font-bold">Member Profile Saved Successfully!</p>
+                    <p className="text-[11px] text-emerald-700">
+                      Changes have been persisted and email notification dispatched.
+                    </p>
+                  </div>
+                </div>
+              )}
+
+              {/* Section 1: Business Identity */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-5 space-y-4">
+                <h4 className="font-serif-heading text-sm font-bold text-[#07174a] uppercase tracking-wider border-b border-slate-200 pb-2">
+                  1. Business Identity &amp; Classification
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Business Name *</label>
+                    <input
+                      type="text"
+                      required
+                      value={editMemberForm.businessName || ''}
+                      onChange={(e) => setEditMemberForm({ ...editMemberForm, businessName: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Legal Registered Name</label>
+                    <input
+                      type="text"
+                      value={editMemberForm.legalName || ''}
+                      onChange={(e) => setEditMemberForm({ ...editMemberForm, legalName: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Owner / Representative *</label>
+                    <input
+                      type="text"
+                      required
+                      value={editMemberForm.ownerName || ''}
+                      onChange={(e) => setEditMemberForm({ ...editMemberForm, ownerName: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Business Category *</label>
+                    <select
+                      value={editMemberForm.category || 'Manufacturing'}
+                      onChange={(e) => setEditMemberForm({ ...editMemberForm, category: e.target.value as any })}
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 bg-white"
+                    >
+                      <option value="Manufacturing">Manufacturing</option>
+                      <option value="Retail">Retail</option>
+                      <option value="Wholesale">Wholesale</option>
+                      <option value="Service Provider">Service Provider</option>
+                      <option value="Professional">Professional</option>
+                      <option value="Distribution">Distribution</option>
+                      <option value="Import / Export">Import / Export</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Industry Sector</label>
+                    <input
+                      type="text"
+                      value={editMemberForm.industry || ''}
+                      onChange={(e) => setEditMemberForm({ ...editMemberForm, industry: e.target.value })}
+                      placeholder="e.g. Iron & Steel, Textiles, IT"
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">GSTIN Number</label>
+                    <input
+                      type="text"
+                      value={editMemberForm.gst || ''}
+                      onChange={(e) => setEditMemberForm({ ...editMemberForm, gst: e.target.value })}
+                      placeholder="23AAACA0000A1Z5"
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 font-mono bg-white uppercase"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 2: Contact & Notification Info */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-5 space-y-4">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-200 pb-2">
+                  <h4 className="font-serif-heading text-sm font-bold text-[#07174a] uppercase tracking-wider">
+                    2. Contact &amp; Notification Coordinates
+                  </h4>
+                  <span className="text-[10px] text-amber-700 font-medium mt-1 sm:mt-0">
+                    &bull; Member alerts (status, reviews) are dispatched to this email
+                  </span>
+                </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="sm:col-span-2">
+                    <label className="block font-semibold text-slate-700 mb-1">Member Email Address (Notifications)</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                      <input
+                        type="email"
+                        value={editMemberForm.email || ''}
+                        onChange={(e) => setEditMemberForm({ ...editMemberForm, email: e.target.value })}
+                        placeholder="contact@enterprise.com"
+                        className="w-full rounded-lg border border-slate-300 py-2.5 pl-9 pr-3 text-xs text-slate-800 bg-white font-medium"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Primary Phone *</label>
+                    <input
+                      type="text"
+                      required
+                      value={editMemberForm.phone || ''}
+                      onChange={(e) => setEditMemberForm({ ...editMemberForm, phone: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 bg-white font-mono"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">WhatsApp Business</label>
+                    <input
+                      type="text"
+                      value={editMemberForm.whatsapp || ''}
+                      onChange={(e) => setEditMemberForm({ ...editMemberForm, whatsapp: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 bg-white font-mono"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 3: Location & Business Scale */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-5 space-y-4">
+                <h4 className="font-serif-heading text-sm font-bold text-[#07174a] uppercase tracking-wider border-b border-slate-200 pb-2">
+                  3. Location, Website &amp; Enterprise Metrics
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+                  <div className="sm:col-span-2">
+                    <label className="block font-semibold text-slate-700 mb-1">Complete Commercial Address</label>
+                    <input
+                      type="text"
+                      value={editMemberForm.address || ''}
+                      onChange={(e) => setEditMemberForm({ ...editMemberForm, address: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">City</label>
+                    <input
+                      type="text"
+                      value={editMemberForm.city || 'Jabalpur'}
+                      onChange={(e) => setEditMemberForm({ ...editMemberForm, city: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Pincode</label>
+                    <input
+                      type="text"
+                      value={editMemberForm.pinCode || '482001'}
+                      onChange={(e) => setEditMemberForm({ ...editMemberForm, pinCode: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 bg-white font-mono"
+                    />
+                  </div>
+
+                  <div className="sm:col-span-2">
+                    <label className="block font-semibold text-slate-700 mb-1">Website URL</label>
+                    <input
+                      type="url"
+                      value={editMemberForm.website || ''}
+                      onChange={(e) => setEditMemberForm({ ...editMemberForm, website: e.target.value })}
+                      placeholder="https://company.com"
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Established Year</label>
+                    <input
+                      type="text"
+                      value={editMemberForm.estYear || ''}
+                      onChange={(e) => setEditMemberForm({ ...editMemberForm, estYear: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Employees Count</label>
+                    <input
+                      type="text"
+                      value={editMemberForm.employees || ''}
+                      onChange={(e) => setEditMemberForm({ ...editMemberForm, employees: e.target.value })}
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 4: Moderation & Spotlight Controls */}
+              <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-5 space-y-4">
+                <h4 className="font-serif-heading text-sm font-bold text-[#07174a] uppercase tracking-wider border-b border-amber-200 pb-2">
+                  4. Chamber Moderation &amp; Spotlight Status
+                </h4>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-5 items-center">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Verification Status</label>
+                    <select
+                      value={editMemberForm.status || 'pending'}
+                      onChange={(e) => setEditMemberForm({ ...editMemberForm, status: e.target.value as any })}
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-xs font-bold text-slate-800 bg-white"
+                    >
+                      <option value="approved">Approved &amp; Active</option>
+                      <option value="pending">Pending Verification</option>
+                      <option value="rejected">Rejected / Incomplete</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Membership Plan</label>
+                    <select
+                      value={editMemberForm.plan || 'Free'}
+                      onChange={(e) => setEditMemberForm({ ...editMemberForm, plan: e.target.value as any })}
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-xs font-bold text-slate-800 bg-white"
+                    >
+                      <option value="Free">Free Directory Listing</option>
+                      <option value="Pro">Pro Chamber Tier</option>
+                      <option value="Premium">Premium Corporate Tier</option>
+                    </select>
+                  </div>
+
+                  <div className="pt-2">
+                    <label className="flex items-center gap-3 p-3 rounded-xl border border-amber-300 bg-white cursor-pointer shadow-xs hover:border-amber-400">
+                      <input
+                        type="checkbox"
+                        checked={Boolean(editMemberForm.featured)}
+                        onChange={(e) => setEditMemberForm({ ...editMemberForm, featured: e.target.checked })}
+                        className="h-4 w-4 rounded text-amber-600 focus:ring-amber-500"
+                      />
+                      <div>
+                        <span className="font-bold text-slate-900 block">⭐ Feature in Spotlight</span>
+                        <span className="text-[10px] text-slate-500">Showcase on Homepage &amp; Top of Directory</span>
+                      </div>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
+              {/* Section 5: Description & Profile Content */}
+              <div className="rounded-xl border border-slate-200 bg-slate-50/50 p-5 space-y-4">
+                <h4 className="font-serif-heading text-sm font-bold text-[#07174a] uppercase tracking-wider border-b border-slate-200 pb-2">
+                  5. Business Narrative &amp; Offerings
+                </h4>
+                <div className="space-y-4">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Short Overview / Tagline</label>
+                    <textarea
+                      rows={2}
+                      value={editMemberForm.description || ''}
+                      onChange={(e) => setEditMemberForm({ ...editMemberForm, description: e.target.value })}
+                      placeholder="Concise 1-2 sentence description of enterprise operations…"
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 bg-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">Detailed Products &amp; Services</label>
+                    <textarea
+                      rows={3}
+                      value={editMemberForm.detailed || ''}
+                      onChange={(e) => setEditMemberForm({ ...editMemberForm, detailed: e.target.value })}
+                      placeholder="Comprehensive list of products, specializations, manufacturing capacity…"
+                      className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 bg-white"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Modal Footer Actions */}
+              <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 sticky bottom-0 bg-white py-3">
+                <p className="text-[11px] text-slate-500">
+                  Saving will update the public directory and alert <span className="font-bold text-[#07174a]">{editMemberForm.email || 'the member'}</span> and <span className="font-bold text-[#07174a]">accjbp@gmail.com</span>.
+                </p>
+                <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
+                  <button
+                    type="button"
+                    onClick={() => setEditingMember(null)}
+                    disabled={savingMember}
+                    className="rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-100 cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={savingMember}
+                    className="rounded-lg bg-[#07174a] px-6 py-2.5 text-xs font-bold text-white hover:bg-[#1540a8] cursor-pointer shadow-md inline-flex items-center gap-2"
+                  >
+                    {savingMember ? (
+                      <>
+                        <RefreshCw className="h-4 w-4 animate-spin" />
+                        <span>Saving Changes…</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-4 w-4" />
+                        <span>Save &amp; Update Member</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+            </form>
           </div>
         </div>
       )}

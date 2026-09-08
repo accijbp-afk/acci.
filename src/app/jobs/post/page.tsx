@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { jobsService } from '@/services/appwrite/jobs';
+import { notificationService } from '@/services/notifications';
 import { Briefcase, ArrowLeft, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 const JOB_CATEGORIES = [
@@ -40,8 +41,45 @@ export default function PostJobPage() {
     e.preventDefault();
     setSubmitting(true);
     try {
-      await jobsService.createJob(formData);
+      const created = await jobsService.createJob(formData);
       setSuccess(true);
+
+      // Notify Secretariat Admin at accjbp@gmail.com
+      notificationService.notifyAdmin({
+        event: 'JOB_POSTED',
+        title: `New Job Opening Posted: ${formData.title} (${formData.company})`,
+        subtitle: `An employment opportunity has been listed on the ACCI Jabalpur Job Portal.`,
+        details: [
+          { label: 'Position Title', value: formData.title },
+          { label: 'Company Name', value: formData.company },
+          { label: 'Job Category', value: formData.category },
+          { label: 'Job Type', value: `${formData.jobType} (${formData.urgency})` },
+          { label: 'Remuneration', value: formData.salary },
+          { label: 'Location', value: formData.location },
+          { label: 'Contact Email', value: formData.contactEmail || 'Not provided' },
+          { label: 'Contact WhatsApp', value: formData.contactWhatsApp || 'Not provided' },
+        ],
+        actionUrl: '/jobs',
+      });
+
+      // Notify Job Poster if email was provided
+      if (formData.contactEmail) {
+        notificationService.notifyMember(formData.contactEmail, {
+          event: 'JOB_POSTED_CONFIRMATION',
+          title: `Job Listing Published: ${formData.title}`,
+          subtitle: `Your job vacancy has been successfully published on the ACCI Jabalpur Employment Exchange.`,
+          details: [
+            { label: 'Designation', value: formData.title },
+            { label: 'Organization', value: formData.company },
+            { label: 'Salary Offered', value: formData.salary },
+            { label: 'Location', value: formData.location },
+            { label: 'Listing Status', value: 'Live & Accepting Applications' },
+          ],
+          actionText: 'View Job on ACCI Portal',
+          actionUrl: '/jobs',
+        });
+      }
+
       setTimeout(() => {
         router.push('/jobs');
       }, 1800);

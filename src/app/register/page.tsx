@@ -5,6 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { authService } from '@/services/appwrite/auth';
+import { notificationService } from '@/services/notifications';
 import { User, Mail, Lock, Phone, MapPin, ArrowRight } from 'lucide-react';
 
 export default function RegisterPage() {
@@ -30,6 +31,36 @@ export default function RegisterPage() {
         phone,
         city,
       });
+
+      // Dispatch admin alert to accjbp@gmail.com
+      notificationService.notifyAdmin({
+        event: 'USER_REGISTERED',
+        title: `New User Registration: ${name}`,
+        subtitle: `A new member profile has been registered on the ACCI Chamber Portal.`,
+        details: [
+          { label: 'Full Name', value: name },
+          { label: 'Email Address', value: email },
+          { label: 'Phone Number', value: phone || 'Not provided' },
+          { label: 'City', value: city || 'Jabalpur' },
+        ],
+        actionUrl: '/admin',
+      });
+
+      // Dispatch welcome confirmation to the member's registered email
+      notificationService.notifyMember(email, {
+        event: 'WELCOME_ACCOUNT',
+        title: `Welcome to ACCI Jabalpur, ${name}!`,
+        subtitle: `Your member account has been created. You can now access the Chamber portal to manage your enterprise listing and post job openings.`,
+        details: [
+          { label: 'Registered Name', value: name },
+          { label: 'Account Email', value: email },
+          { label: 'City', value: city || 'Jabalpur' },
+          { label: 'Membership Status', value: 'Active Registered User' },
+        ],
+        actionText: 'Go to Member Dashboard',
+        actionUrl: '/dashboard',
+      });
+
       router.push('/dashboard');
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
