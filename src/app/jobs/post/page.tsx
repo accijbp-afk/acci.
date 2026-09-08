@@ -44,7 +44,7 @@ export default function PostJobPage() {
       const created = await jobsService.createJob(formData);
       setSuccess(true);
 
-      // Notify Secretariat Admin at accjbp@gmail.com
+      // Notify Secretariat Admin at accijbp@gmail.com
       notificationService.notifyAdmin({
         event: 'JOB_POSTED',
         title: `New Job Opening Posted: ${formData.title} (${formData.company})`,

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import nodemailer from 'nodemailer';
 
-const FALLBACK_ADMIN_EMAIL = 'accjbp@gmail.com';
+const FALLBACK_ADMIN_EMAIL = 'accijbp@gmail.com';
 
 // Generate consistent branded HTML email template for ACCI
 function renderEmailTemplate({
@@ -117,7 +117,7 @@ function renderEmailTemplate({
                   Agrawal Chamber of Commerce &amp; Industries &bull; Secretariat Office, Jabalpur (M.P.)
                 </p>
                 <p style="margin: 4px 0 0 0; font-size: 10px; color: #94a3b8;">
-                  Dedicated Secretariat Helpline: +91 8319565363 &bull; Official Email: accjbp@gmail.com
+                  Dedicated Secretariat Helpline: +91 8319565363 &bull; Official Email: accijbp@gmail.com
                 </p>
               </td>
             </tr>

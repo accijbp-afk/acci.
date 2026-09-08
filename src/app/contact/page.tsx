@@ -23,7 +23,7 @@ export default function ContactPage() {
       await inquiriesService.submitContact(form);
       setSuccess(true);
 
-      // Notify Secretariat Admin at accjbp@gmail.com
+      // Notify Secretariat Admin at accijbp@gmail.com
       notificationService.notifyAdmin({
         event: 'INQUIRY_SUBMITTED',
         title: `New Secretariat Inquiry: ${form.subject}`,

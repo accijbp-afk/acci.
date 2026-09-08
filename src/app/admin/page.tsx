@@ -89,16 +89,16 @@ export default function AdminDashboard() {
   }>({
     configured: false,
     user: null,
-    defaultAdminEmail: 'accjbp@gmail.com',
+    defaultAdminEmail: 'accijbp@gmail.com',
     recentNotifications: [],
   });
   const [smtpLoading, setSmtpLoading] = useState(false);
   const [testEmailLoading, setTestEmailLoading] = useState(false);
   const [testEmailResult, setTestEmailResult] = useState<{ success: boolean; message: string } | null>(null);
   const [smtpForm, setSmtpForm] = useState({
-    user: 'accjbp@gmail.com',
+    user: 'accijbp@gmail.com',
     pass: '',
-    adminEmail: 'accjbp@gmail.com',
+    adminEmail: 'accijbp@gmail.com',
   });
   const [savingSmtp, setSavingSmtp] = useState(false);
   const [saveSmtpResult, setSaveSmtpResult] = useState<{ success: boolean; message: string } | null>(null);
@@ -486,7 +486,7 @@ export default function AdminDashboard() {
       setSmtpStatus({
         configured: Boolean(data.smtpConfigured),
         user: data.configuredUser || null,
-        defaultAdminEmail: data.defaultAdminEmail || 'accjbp@gmail.com',
+        defaultAdminEmail: data.defaultAdminEmail || 'accijbp@gmail.com',
         recentNotifications: data.recentNotifications || [],
       });
       if (data.defaultAdminEmail) {
@@ -508,14 +508,14 @@ export default function AdminDashboard() {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           action: 'test_smtp',
-          to: smtpForm.adminEmail || 'accjbp@gmail.com',
+          to: smtpForm.adminEmail || 'accijbp@gmail.com',
         }),
       });
       const data = await res.json();
       if (res.ok && data.success) {
         setTestEmailResult({
           success: true,
-          message: data.message || `Test email successfully delivered to ${data.recipient || 'accjbp@gmail.com'}!`,
+          message: data.message || `Test email successfully delivered to ${data.recipient || 'accijbp@gmail.com'}!`,
         });
       } else {
         setTestEmailResult({
@@ -546,7 +546,7 @@ export default function AdminDashboard() {
           action: 'save_smtp',
           user: smtpForm.user.trim(),
           pass: smtpForm.pass.trim(),
-          adminEmail: smtpForm.adminEmail.trim() || 'accjbp@gmail.com',
+          adminEmail: smtpForm.adminEmail.trim() || 'accijbp@gmail.com',
         }),
       });
       const data = await res.json();
@@ -1605,7 +1605,7 @@ export default function AdminDashboard() {
                         Secretariat Email & Notification Center
                       </h2>
                       <p className="text-xs text-slate-500">
-                        Manage automated alerts dispatched to <strong>accjbp@gmail.com</strong> and registered member inboxes.
+                        Manage automated alerts dispatched to <strong>accijbp@gmail.com</strong> and registered member inboxes.
                       </p>
                     </div>
                   </div>
@@ -1651,7 +1651,7 @@ export default function AdminDashboard() {
                     Chamber Alert Recipient
                   </span>
                   <div className="text-sm font-bold text-[#07174a] font-mono truncate">
-                    {smtpStatus.defaultAdminEmail || 'accjbp@gmail.com'}
+                    {smtpStatus.defaultAdminEmail || 'accijbp@gmail.com'}
                   </div>
                   <p className="text-[11px] text-slate-500 mt-1">
                     Receives new account, review, job, &amp; inquiry alerts.
@@ -1680,7 +1680,7 @@ export default function AdminDashboard() {
                     Instant Live Email Test
                   </h3>
                   <p className="text-xs text-slate-500 mt-0.5">
-                    Send a test notification to verify delivery to your inbox ({smtpForm.adminEmail || 'accjbp@gmail.com'}).
+                    Send a test notification to verify delivery to your inbox ({smtpForm.adminEmail || 'accijbp@gmail.com'}).
                   </p>
                 </div>
                 <button
@@ -1727,7 +1727,7 @@ export default function AdminDashboard() {
                   </h3>
                 </div>
                 <p className="text-xs text-slate-500 mb-5 leading-relaxed">
-                  Enter your Google Account email and the 16-character Google App Password. This will enable real-time delivery to <strong>accjbp@gmail.com</strong> and member inboxes.
+                  Enter your Google Account email and the 16-character Google App Password. This will enable real-time delivery to <strong>accijbp@gmail.com</strong> and member inboxes.
                 </p>
 
                 {saveSmtpResult && (
@@ -1759,7 +1759,7 @@ export default function AdminDashboard() {
                       required
                       value={smtpForm.user}
                       onChange={(e) => setSmtpForm({ ...smtpForm, user: e.target.value })}
-                      placeholder="accjbp@gmail.com"
+                      placeholder="accijbp@gmail.com"
                       className="w-full rounded-xl border border-slate-300 p-2.5 text-xs text-slate-800 focus:outline-none focus:border-[#1540a8]"
                     />
                   </div>
@@ -1799,7 +1799,7 @@ export default function AdminDashboard() {
                       required
                       value={smtpForm.adminEmail}
                       onChange={(e) => setSmtpForm({ ...smtpForm, adminEmail: e.target.value })}
-                      placeholder="accjbp@gmail.com"
+                      placeholder="accijbp@gmail.com"
                       className="w-full rounded-xl border border-slate-300 p-2.5 text-xs text-slate-800 focus:outline-none focus:border-[#1540a8]"
                     />
                     <span className="text-[11px] text-slate-400 mt-1 block">
@@ -1832,7 +1832,7 @@ export default function AdminDashboard() {
 
                   <ol className="space-y-3 text-xs text-slate-700 pl-1 list-decimal list-inside leading-relaxed">
                     <li>
-                      Log into your Google Account (<strong>accjbp@gmail.com</strong>).
+                      Log into your Google Account (<strong>accijbp@gmail.com</strong>).
                     </li>
                     <li>
                       Go to Google Security:{' '}
@@ -2585,7 +2585,7 @@ export default function AdminDashboard() {
               {/* Modal Footer Actions */}
               <div className="pt-4 border-t border-slate-200 flex flex-col sm:flex-row items-center justify-between gap-4 sticky bottom-0 bg-white py-3">
                 <p className="text-[11px] text-slate-500">
-                  Saving will update the public directory and alert <span className="font-bold text-[#07174a]">{editMemberForm.email || 'the member'}</span> and <span className="font-bold text-[#07174a]">accjbp@gmail.com</span>.
+                  Saving will update the public directory and alert <span className="font-bold text-[#07174a]">{editMemberForm.email || 'the member'}</span> and <span className="font-bold text-[#07174a]">accijbp@gmail.com</span>.
                 </p>
                 <div className="flex items-center gap-3 w-full sm:w-auto justify-end">
                   <button

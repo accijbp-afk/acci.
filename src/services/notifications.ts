@@ -1,7 +1,7 @@
 /**
  * ACCI Chamber Notifications & Email Service
  * Dispatches notifications to:
- * - Secretariat Admin (accjbp@gmail.com) for all platform events
+ * - Secretariat Admin (accijbp@gmail.com) for all platform events
  * - Members (their registered email) for verification, featured status, reviews, edits
  */
 
@@ -26,7 +26,7 @@ export interface SendNotificationParams {
 
 export const notificationService = {
   /**
-   * Send notification to Secretariat Admin (accjbp@gmail.com)
+   * Send notification to Secretariat Admin (accijbp@gmail.com)
    */
   async notifyAdmin(params: {
     event:
@@ -60,7 +60,7 @@ export const notificationService = {
           ],
           actionText: 'Open Admin Dashboard',
           actionUrl: params.actionUrl || '/admin',
-          footerNote: 'This is an automated chamber governance alert delivered to Secretariat inbox (accjbp@gmail.com).',
+          footerNote: 'This is an automated chamber governance alert delivered to Secretariat inbox (accijbp@gmail.com).',
         }),
       });
 

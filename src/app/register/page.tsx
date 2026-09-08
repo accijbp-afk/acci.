@@ -32,7 +32,7 @@ export default function RegisterPage() {
         city,
       });
 
-      // Dispatch admin alert to accjbp@gmail.com
+      // Dispatch admin alert to accijbp@gmail.com
       notificationService.notifyAdmin({
         event: 'USER_REGISTERED',
         title: `New User Registration: ${name}`,

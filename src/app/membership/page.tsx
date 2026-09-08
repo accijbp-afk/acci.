@@ -77,7 +77,7 @@ export default function MembershipPage() {
 
       setSubmittedId(res.id);
 
-      // Notify Secretariat Admin at accjbp@gmail.com
+      // Notify Secretariat Admin at accijbp@gmail.com
       notificationService.notifyAdmin({
         event: 'MEMBERSHIP_APPLICATION',
         title: `New Business Membership Application: ${form.businessName}`,

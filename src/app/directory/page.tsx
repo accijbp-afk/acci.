@@ -95,7 +95,7 @@ function DirectoryContent() {
       reviewText,
     });
 
-    // Notify Secretariat Admin at accjbp@gmail.com
+    // Notify Secretariat Admin at accijbp@gmail.com
     notificationService.notifyAdmin({
       event: 'REVIEW_SUBMITTED',
       title: `New Review for ${targetVendor.businessName}`,
