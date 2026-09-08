@@ -126,7 +126,9 @@ export default function AdminDashboard() {
     time: '04:00 PM',
     venue: 'Hotel Satkar, Jabalpur',
     description: '',
+    imageUrl: '',
   });
+  const [eventImageError, setEventImageError] = useState<string | null>(null);
 
   // Gallery Album Form State
   const [showAddAlbumModal, setShowAddAlbumModal] = useState(false);
@@ -353,6 +355,50 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleEventImageUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Strict minimum size: max 500 KB (500 * 1024 bytes)
+    const MAX_SIZE_BYTES = 500 * 1024;
+    if (file.size > MAX_SIZE_BYTES) {
+      setEventImageError(
+        `File size (${(file.size / 1024).toFixed(0)} KB) exceeds the 500 KB limit. Recommended dimensions: 1200 × 675 px (16:9 Landscape). Please compress the image.`
+      );
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      const img = new window.Image();
+      img.onload = () => {
+        const w = img.naturalWidth;
+        const h = img.naturalHeight;
+        if (h > w) {
+          setEventImageError(
+            `Portrait image (${w} × ${h} px) not recommended. Event flyers and covers must be horizontal / landscape with recommended dimensions of 1200 × 675 px.`
+          );
+          return;
+        }
+        if (w < 600 || h < 250) {
+          setEventImageError(
+            `Image resolution (${w} × ${h} px) is too low. Required dimensions: 1200 × 675 px (minimum 600 × 250 px, landscape).`
+          );
+          return;
+        }
+        setEventImageError(null);
+        setNewEvent((prev) => ({ ...prev, imageUrl: result }));
+      };
+      img.onerror = () => {
+        setEventImageError('Could not load image file. Please upload a standard JPG, PNG, or WebP photo.');
+      };
+      img.src = result;
+    };
+    reader.readAsDataURL(file);
+  };
+
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
     await eventsService.createEvent({
@@ -367,7 +413,9 @@ export default function AdminDashboard() {
       time: '04:00 PM',
       venue: 'Hotel Satkar, Jabalpur',
       description: '',
+      imageUrl: '',
     });
+    setEventImageError(null);
     loadAllData();
   };
 
@@ -1006,10 +1054,74 @@ export default function AdminDashboard() {
               </button>
             </div>
 
+            {/* Step-by-Step Picture Upload & Dimensions Guide */}
+            <div className="mb-6 rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50/80 via-indigo-50/40 to-slate-50 p-5 shadow-2xs">
+              <div className="flex items-center gap-2 mb-2">
+                <Images className="h-4 w-4 text-[#1540a8]" />
+                <h3 className="font-serif-heading text-sm font-bold text-[#07174a]">
+                  Step-by-Step Instructions: Uploading Pictures for Events
+                </h3>
+              </div>
+              <p className="text-xs text-slate-600 mb-4 leading-relaxed">
+                Follow these 4 simple steps to add and optimize banners, flyers, and photos for upcoming events:
+              </p>
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-3 text-xs">
+                <div className="rounded-lg bg-white p-3 border border-blue-100 shadow-2xs">
+                  <div className="flex items-center gap-1.5 font-bold text-[#1540a8] mb-1">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-[11px] font-bold text-[#1540a8]">1</span>
+                    <span>Image Dimensions</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Always use landscape orientation (16:9 ratio). Recommended: <b className="font-mono text-slate-800">1200 × 675 px</b> or <b className="font-mono text-slate-800">800 × 450 px</b> (min 600 × 250 px).
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-white p-3 border border-blue-100 shadow-2xs">
+                  <div className="flex items-center gap-1.5 font-bold text-[#1540a8] mb-1">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-[11px] font-bold text-[#1540a8]">2</span>
+                    <span>File Size Limit</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Keep files under <b className="font-mono text-amber-700 font-bold">500 KB</b> in JPG, PNG, or WebP format. This ensures blazing fast mobile loading for visitors.
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-white p-3 border border-blue-100 shadow-2xs">
+                  <div className="flex items-center gap-1.5 font-bold text-[#1540a8] mb-1">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-[11px] font-bold text-[#1540a8]">3</span>
+                    <span>Direct File Upload</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    Click <b className="text-[#07174a]">+ Add Chamber Event</b> &rarr; choose <b className="text-[#1540a8]">Upload Event Cover Photo</b> to pick the picture directly from your device.
+                  </p>
+                </div>
+
+                <div className="rounded-lg bg-white p-3 border border-blue-100 shadow-2xs">
+                  <div className="flex items-center gap-1.5 font-bold text-[#1540a8] mb-1">
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-blue-100 text-[11px] font-bold text-[#1540a8]">4</span>
+                    <span>Past Event Albums</span>
+                  </div>
+                  <p className="text-slate-600 text-[11px] leading-relaxed">
+                    To publish multiple photo albums of concluded events, switch to the <b className="text-[#1540a8]">Gallery</b> tab on the left and click <b className="text-[#07174a]">+ Add Concluded Event Album</b>.
+                  </p>
+                </div>
+              </div>
+            </div>
+
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {events.map((ev) => (
                 <div key={ev.id} className="rounded-xl border border-slate-200 p-5 flex flex-col justify-between">
                   <div>
+                    {ev.imageUrl && (
+                      <div className="relative h-32 w-full rounded-lg overflow-hidden mb-3 border border-slate-200 bg-slate-100 shadow-2xs">
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={ev.imageUrl}
+                          alt={ev.title}
+                          className="h-full w-full object-cover"
+                        />
+                      </div>
+                    )}
                     <span className="text-[10px] font-bold uppercase tracking-wider bg-blue-50 text-blue-700 px-2 py-0.5 rounded">
                       {ev.category}
                     </span>
@@ -2013,9 +2125,82 @@ export default function AdminDashboard() {
                   className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800"
                 />
               </div>
+
+              {/* Event Cover Photo / Banner Manager */}
+              <div className="rounded-xl border border-slate-200 bg-stone-50/90 p-3.5 space-y-2.5">
+                <div className="flex items-center justify-between">
+                  <label className="block font-bold text-slate-800 text-[11px]">
+                    Event Cover Photo / Flyer
+                  </label>
+                  <span className="text-[10px] text-slate-500 font-medium">
+                    Recommended: 1200 × 675 px (16:9)
+                  </span>
+                </div>
+
+                {/* Requirements info */}
+                <div className="flex flex-wrap items-center justify-between gap-1 text-[10px] bg-white border border-stone-200 rounded-md px-2.5 py-1.5 text-slate-600">
+                  <span>📐 <b>Dimensions:</b> 1200 × 675 px (Landscape)</span>
+                  <span>📦 <b>Max Size:</b> 500 KB</span>
+                </div>
+
+                {/* Inline Error */}
+                {eventImageError && (
+                  <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-[11px] p-2 flex items-start gap-1.5 animate-in fade-in">
+                    <AlertCircle className="h-3.5 w-3.5 text-red-600 shrink-0 mt-0.5" />
+                    <span><b>Error:</b> {eventImageError}</span>
+                  </div>
+                )}
+
+                {/* Preview */}
+                {newEvent.imageUrl && (
+                  <div className="relative h-28 w-full rounded-lg overflow-hidden border border-slate-300 bg-black/5">
+                    {/* eslint-disable-next-line @next/next/no-img-element */}
+                    <img
+                      src={newEvent.imageUrl}
+                      alt="Event Cover Preview"
+                      className="h-full w-full object-cover"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setNewEvent({ ...newEvent, imageUrl: '' })}
+                      className="absolute top-1.5 right-1.5 rounded-full bg-black/70 hover:bg-black text-white p-1 text-[10px] cursor-pointer"
+                      title="Remove picture"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
+                {/* Upload Buttons */}
+                <div className="flex items-center gap-2">
+                  <label className="cursor-pointer inline-flex items-center justify-center gap-1.5 rounded-lg bg-white border border-stone-300 px-3 py-1.5 text-[11px] font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-2xs shrink-0">
+                    <Images className="h-3.5 w-3.5 text-[#1540a8]" />
+                    <span>Upload Picture File</span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      onChange={handleEventImageUpload}
+                      className="hidden"
+                    />
+                  </label>
+
+                  <input
+                    type="text"
+                    value={newEvent.imageUrl.startsWith('data:') ? '' : newEvent.imageUrl}
+                    onChange={(e) => {
+                      setNewEvent({ ...newEvent, imageUrl: e.target.value });
+                      if (eventImageError) setEventImageError(null);
+                    }}
+                    placeholder={newEvent.imageUrl.startsWith('data:') ? 'Local picture chosen' : 'Or paste direct image URL (https://…)'}
+                    className="flex-1 rounded-lg border border-slate-300 px-2.5 py-1.5 text-[11px] text-slate-800 focus:outline-none focus:border-[#1540a8] bg-white"
+                  />
+                </div>
+              </div>
+
               <button
                 type="submit"
-                className="w-full rounded-lg bg-[#1540a8] py-2.5 text-xs font-bold text-white hover:bg-[#07174a]"
+                disabled={!!eventImageError}
+                className="w-full rounded-lg bg-[#1540a8] py-2.5 text-xs font-bold text-white hover:bg-[#07174a] disabled:opacity-50 cursor-pointer"
               >
                 Publish Event
               </button>

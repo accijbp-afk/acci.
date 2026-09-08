@@ -26,6 +26,7 @@ import {
   Camera,
   Check,
   RefreshCw,
+  AlertCircle,
 } from 'lucide-react';
 
 export default function MemberDashboard() {
@@ -40,6 +41,7 @@ export default function MemberDashboard() {
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
   const [savingBanner, setSavingBanner] = useState(false);
   const [bannerSuccess, setBannerSuccess] = useState(false);
+  const [bannerError, setBannerError] = useState<string | null>(null);
 
   useEffect(() => {
     authService.getCurrentUser().then((currentUser) => {
@@ -70,19 +72,59 @@ export default function MemberDashboard() {
 
   const handleBannerFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert('Please choose an image under 2MB.');
-        return;
-      }
-      const reader = new FileReader();
-      reader.onloadend = () => {
-        const result = reader.result as string;
+    if (!file) return;
+
+    // Strict minimum file size limit: 500 KB (500 * 1024 bytes)
+    const MAX_SIZE_BYTES = 500 * 1024;
+    if (file.size > MAX_SIZE_BYTES) {
+      setBannerError(
+        `File size (${(file.size / 1024).toFixed(0)} KB) exceeds the maximum allowed size of 500 KB. Image dimensions should be 1200 × 500 px. Please compress or resize your image.`
+      );
+      setBannerPreview(null);
+      e.target.value = '';
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onloadend = () => {
+      const result = reader.result as string;
+      const img = new window.Image();
+      img.onload = () => {
+        const width = img.naturalWidth;
+        const height = img.naturalHeight;
+
+        // Verify orientation (landscape only)
+        if (height > width) {
+          setBannerError(
+            `Portrait image (${width} × ${height} px) is not allowed. The banner image must be horizontal/landscape with required dimensions of 1200 × 500 px.`
+          );
+          setBannerPreview(null);
+          return;
+        }
+
+        // Verify minimum resolution
+        if (width < 600 || height < 250) {
+          setBannerError(
+            `Image resolution (${width} × ${height} px) is too small. Required dimensions: 1200 × 500 px (minimum 600 × 250 px, landscape).`
+          );
+          setBannerPreview(null);
+          return;
+        }
+
+        // Valid image
+        setBannerError(null);
         setBannerPreview(result);
         setBannerInputUrl(result);
       };
-      reader.readAsDataURL(file);
-    }
+
+      img.onerror = () => {
+        setBannerError('Unable to read the image file. Please upload a standard JPG, PNG, or WebP photo.');
+        setBannerPreview(null);
+      };
+
+      img.src = result;
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleSaveBanner = async () => {
@@ -374,6 +416,31 @@ export default function MemberDashboard() {
 
                   {/* Upload Controls */}
                   <div className="space-y-3">
+                    {/* Dimension & File Size Guidance */}
+                    <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600 bg-white border border-stone-200 rounded-lg px-3.5 py-2 shadow-2xs">
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-800">Required Dimensions:</span>
+                        <span className="font-mono text-[#1540a8] font-bold">1200 × 500 px</span>
+                        <span className="text-slate-500">(Landscape 16:9, min 600 × 250 px)</span>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-bold text-slate-800">Maximum File Size:</span>
+                        <span className="font-mono text-amber-700 font-bold">500 KB</span>
+                        <span className="text-slate-500">(JPG, PNG, WebP)</span>
+                      </div>
+                    </div>
+
+                    {/* Inline Dimension / Size Error Text */}
+                    {bannerError && (
+                      <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs px-3.5 py-2.5 font-medium flex items-start gap-2.5 animate-in fade-in">
+                        <AlertCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+                        <div className="flex-1">
+                          <span className="font-bold">Image Dimension / Size Error: </span>
+                          {bannerError}
+                        </div>
+                      </div>
+                    )}
+
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
                       <label className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-lg bg-white border border-stone-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs shrink-0">
                         <Camera className="h-4 w-4 text-[#1540a8]" />
@@ -393,6 +460,7 @@ export default function MemberDashboard() {
                           onChange={(e) => {
                             setBannerInputUrl(e.target.value);
                             setBannerPreview(e.target.value.trim() || null);
+                            if (bannerError) setBannerError(null);
                           }}
                           placeholder={bannerInputUrl.startsWith('data:') ? 'Local image selected for upload' : 'Or paste direct image URL (https://…)'}
                           className="w-full rounded-lg bg-white border border-stone-300 px-3 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#1540a8]"
@@ -401,7 +469,7 @@ export default function MemberDashboard() {
 
                       <button
                         onClick={handleSaveBanner}
-                        disabled={savingBanner || (!bannerInputUrl && !bannerPreview)}
+                        disabled={savingBanner || (!bannerInputUrl && !bannerPreview) || !!bannerError}
                         className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#1540a8] hover:bg-[#07174a] text-white px-5 py-2 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shrink-0"
                       >
                         {savingBanner ? (

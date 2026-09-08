@@ -53,13 +53,24 @@ export default function EventsPage() {
               >
                 <div>
                   <div
-                    className="h-36 p-5 text-white flex flex-col justify-between"
+                    className="relative h-44 p-5 text-white flex flex-col justify-between overflow-hidden"
                     style={{ background: ev.bgColor || 'linear-gradient(135deg, #07174a, #1540a8)' }}
                   >
-                    <span className="self-start px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-white/20 backdrop-blur uppercase tracking-wider">
+                    {ev.imageUrl && (
+                      <>
+                        {/* eslint-disable-next-line @next/next/no-img-element */}
+                        <img
+                          src={ev.imageUrl}
+                          alt={ev.title}
+                          className="absolute inset-0 h-full w-full object-cover"
+                        />
+                        <div className="absolute inset-0 bg-gradient-to-t from-black/85 via-black/40 to-black/20" />
+                      </>
+                    )}
+                    <span className="relative z-10 self-start px-2.5 py-0.5 text-[10px] font-bold rounded-full bg-white/20 backdrop-blur uppercase tracking-wider">
                       {ev.category}
                     </span>
-                    <div className="flex items-baseline gap-2">
+                    <div className="relative z-10 flex items-baseline gap-2">
                       <span className="font-serif-heading text-3xl font-extrabold text-amber-300">
                         {ev.date ? new Date(ev.date).getDate() : '18'}
                       </span>
