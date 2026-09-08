@@ -198,10 +198,6 @@ export const Footer: React.FC = () => {
             <Link href="/privacy" className="hover:text-white transition-colors">
               {t('Privacy Policy')}
             </Link>
-            <span>•</span>
-            <span className="text-amber-400/90 font-medium">
-              {t('Powered by Appwrite Backend')}
-            </span>
           </div>
         </div>
       </div>

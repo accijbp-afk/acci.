@@ -19,6 +19,7 @@ import {
   JobListing,
   ContactSubmission,
   BusinessReview,
+  LegalDocument,
 } from '@/types';
 import {
   ShieldCheck,
@@ -39,13 +40,19 @@ import {
   ExternalLink,
   Search,
   Eye,
+  FileText,
+  Save,
+  RotateCcw,
+  Check,
 } from 'lucide-react';
+import { legalService } from '@/services/appwrite/legal';
+import { LegalContentRenderer } from '@/components/common/LegalContentRenderer';
 
 export default function AdminDashboard() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'vendors' | 'events' | 'gallery' | 'news' | 'jobs' | 'inquiries' | 'reviews'
+    'overview' | 'vendors' | 'events' | 'gallery' | 'news' | 'jobs' | 'inquiries' | 'reviews' | 'legal'
   >('overview');
 
   // Data states
@@ -57,6 +64,13 @@ export default function AdminDashboard() {
   const [inquiries, setInquiries] = useState<ContactSubmission[]>([]);
   const [reviews, setReviews] = useState<BusinessReview[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Legal Policies State
+  const [activeLegalDoc, setActiveLegalDoc] = useState<'terms' | 'privacy'>('terms');
+  const [legalDoc, setLegalDoc] = useState<LegalDocument>(() => legalService.getDefaults('terms'));
+  const [legalLoading, setLegalLoading] = useState(false);
+  const [legalSaving, setLegalSaving] = useState(false);
+  const [legalSaveSuccess, setLegalSaveSuccess] = useState(false);
 
   // New Event Form State
   const [showAddEventModal, setShowAddEventModal] = useState(false);
@@ -111,6 +125,12 @@ export default function AdminDashboard() {
     setInquiries(inqRes);
     setReviews(revRes);
     setAlbums(galRes);
+    try {
+      const lDoc = await legalService.getLegalContent(activeLegalDoc);
+      setLegalDoc(lDoc);
+    } catch {
+      // Fallback already provided in state
+    }
     setLoading(false);
   };
 
@@ -232,6 +252,52 @@ export default function AdminDashboard() {
     loadAllData();
   };
 
+  const handleSwitchLegalDoc = async (type: 'terms' | 'privacy') => {
+    setActiveLegalDoc(type);
+    setLegalLoading(true);
+    setLegalSaveSuccess(false);
+    try {
+      const data = await legalService.getLegalContent(type);
+      setLegalDoc(data);
+    } catch {
+      // Keep existing or default
+    } finally {
+      setLegalLoading(false);
+    }
+  };
+
+  const handleSaveLegal = async () => {
+    setLegalSaving(true);
+    try {
+      const saved = await legalService.updateLegalContent(activeLegalDoc, legalDoc);
+      setLegalDoc(saved);
+      setLegalSaveSuccess(true);
+      setTimeout(() => setLegalSaveSuccess(false), 4000);
+    } catch (e) {
+      console.error('Error saving legal policy', e);
+      alert('Failed to save policy changes. Please try again.');
+    } finally {
+      setLegalSaving(false);
+    }
+  };
+
+  const handleResetLegal = async () => {
+    const docName = activeLegalDoc === 'terms' ? 'Terms & Conditions' : 'Privacy Policy';
+    if (confirm(`Are you sure you want to restore the official default ACCI template for ${docName}?`)) {
+      setLegalSaving(true);
+      try {
+        const res = await legalService.resetLegalContent(activeLegalDoc);
+        setLegalDoc(res);
+        setLegalSaveSuccess(true);
+        setTimeout(() => setLegalSaveSuccess(false), 3000);
+      } catch (e) {
+        console.error('Error resetting policy', e);
+      } finally {
+        setLegalSaving(false);
+      }
+    }
+  };
+
   const handleLogout = async () => {
     await authService.logout();
     router.push('/');
@@ -301,6 +367,7 @@ export default function AdminDashboard() {
             { id: 'jobs', label: `Jobs (${jobs.length})`, icon: Briefcase },
             { id: 'inquiries', label: `Inquiries (${inquiries.length})`, icon: Mail },
             { id: 'reviews', label: `Reviews (${reviews.length})`, icon: Star },
+            { id: 'legal', label: 'Legal Policies', icon: FileText },
           ].map((tab) => {
             const Icon = tab.icon;
             return (
@@ -806,6 +873,283 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               ))}
+            </div>
+          </div>
+        )}
+
+        {/* TAB 9: LEGAL & POLICIES */}
+        {activeTab === 'legal' && (
+          <div className="space-y-6">
+            {/* Top document selector & actions */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+              <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h2 className="font-serif-heading text-xl font-bold text-[#07174a]">
+                      Legal Governance &amp; Policy Management
+                    </h2>
+                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-[10px] font-bold text-emerald-800">
+                      Live Editable
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 mt-1">
+                    Edit official Chamber Terms &amp; Conditions and Privacy Policy directly. Changes update the public pages instantly.
+                  </p>
+                </div>
+
+                <div className="flex flex-wrap items-center gap-2">
+                  <a
+                    href={activeLegalDoc === 'terms' ? '/terms' : '/privacy'}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-300 bg-slate-50 px-3 py-2 text-xs font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer"
+                  >
+                    <ExternalLink className="h-3.5 w-3.5" />
+                    <span>View Public Page</span>
+                  </a>
+
+                  <button
+                    onClick={handleResetLegal}
+                    disabled={legalSaving}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-amber-300 bg-amber-50 px-3 py-2 text-xs font-semibold text-amber-800 hover:bg-amber-100 cursor-pointer disabled:opacity-50"
+                    title="Restore the official default template"
+                  >
+                    <RotateCcw className="h-3.5 w-3.5" />
+                    <span>Reset to ACCI Default</span>
+                  </button>
+
+                  <button
+                    onClick={handleSaveLegal}
+                    disabled={legalSaving}
+                    className="inline-flex items-center gap-1.5 rounded-lg bg-[#1540a8] hover:bg-[#07174a] text-white px-5 py-2 text-xs font-bold transition shadow cursor-pointer disabled:opacity-50"
+                  >
+                    {legalSaving ? (
+                      <>
+                        <div className="h-3.5 w-3.5 animate-spin rounded-full border-2 border-white border-r-transparent" />
+                        <span>Saving…</span>
+                      </>
+                    ) : (
+                      <>
+                        <Save className="h-3.5 w-3.5" />
+                        <span>Save &amp; Publish</span>
+                      </>
+                    )}
+                  </button>
+                </div>
+              </div>
+
+              {/* Policy document switch buttons */}
+              <div className="mt-6 flex flex-wrap gap-2 border-t border-slate-100 pt-4">
+                <button
+                  type="button"
+                  onClick={() => handleSwitchLegalDoc('terms')}
+                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition cursor-pointer ${
+                    activeLegalDoc === 'terms'
+                      ? 'bg-[#07174a] text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>Terms &amp; Conditions</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleSwitchLegalDoc('privacy')}
+                  className={`inline-flex items-center gap-2 rounded-xl px-4 py-2.5 text-xs font-bold transition cursor-pointer ${
+                    activeLegalDoc === 'privacy'
+                      ? 'bg-[#07174a] text-white shadow-sm'
+                      : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                  }`}
+                >
+                  <FileText className="h-4 w-4" />
+                  <span>Privacy Policy</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Success notification banner */}
+            {legalSaveSuccess && (
+              <div className="rounded-xl border border-emerald-200 bg-emerald-50 p-4 text-xs font-semibold text-emerald-900 flex items-center gap-2 animate-in fade-in">
+                <Check className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span>
+                  Successfully updated {activeLegalDoc === 'terms' ? 'Terms & Conditions' : 'Privacy Policy'}! The changes are now live on the public page.
+                </span>
+              </div>
+            )}
+
+            {/* Editor & Live Preview Split */}
+            <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+              {/* Left Column: Form & Editor */}
+              <div className="lg:col-span-7 space-y-4">
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Document Title *
+                      </label>
+                      <input
+                        type="text"
+                        value={legalDoc.title}
+                        onChange={(e) => setLegalDoc({ ...legalDoc, title: e.target.value })}
+                        placeholder="e.g. Terms & Conditions of Chamber Affiliation"
+                        className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-xs font-semibold text-slate-700 mb-1">
+                        Category / Topic Badge
+                      </label>
+                      <input
+                        type="text"
+                        value={legalDoc.categoryBadge}
+                        onChange={(e) => setLegalDoc({ ...legalDoc, categoryBadge: e.target.value })}
+                        placeholder="e.g. Legal Governance & Bylaws"
+                        className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                      />
+                    </div>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-semibold text-slate-700 mb-1">
+                      Last Updated Display
+                    </label>
+                    <input
+                      type="text"
+                      value={legalDoc.lastUpdated || ''}
+                      onChange={(e) => setLegalDoc({ ...legalDoc, lastUpdated: e.target.value })}
+                      placeholder="e.g. September 2026"
+                      className="w-full sm:w-1/2 rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                    />
+                  </div>
+
+                  {/* Formatting Toolbar */}
+                  <div className="border-t border-slate-100 pt-3">
+                    <div className="flex items-center justify-between mb-2">
+                      <label className="block text-xs font-semibold text-slate-700">
+                        Document Content *
+                      </label>
+                      <span className="text-[11px] text-slate-400">
+                        Supports Headings (##), Bullet Lists (-), Bold (**text**)
+                      </span>
+                    </div>
+
+                    <div className="flex flex-wrap items-center gap-1.5 mb-2 bg-slate-50 p-2 rounded-lg border border-slate-200 text-xs">
+                      <span className="text-[11px] text-slate-500 font-medium mr-1">Quick insert:</span>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setLegalDoc({
+                            ...legalDoc,
+                            content: legalDoc.content + '\n\n## New Section Heading\nWrite your section clauses here…\n',
+                          })
+                        }
+                        className="rounded bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 border border-slate-200 hover:bg-slate-100 cursor-pointer"
+                      >
+                        + Section (##)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setLegalDoc({
+                            ...legalDoc,
+                            content: legalDoc.content + '\n- First clause item\n- Second clause item\n',
+                          })
+                        }
+                        className="rounded bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 border border-slate-200 hover:bg-slate-100 cursor-pointer"
+                      >
+                        + Bullet List (-)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setLegalDoc({
+                            ...legalDoc,
+                            content: legalDoc.content + ' **important clause** ',
+                          })
+                        }
+                        className="rounded bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 border border-slate-200 hover:bg-slate-100 cursor-pointer"
+                      >
+                        + Bold (**text**)
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() =>
+                          setLegalDoc({
+                            ...legalDoc,
+                            content: legalDoc.content + '\n\n## Secretariat Contact & Legal Notices\nFor official notices, write to: accijbp@gmail.com or visit Civic Centre, Jabalpur.\n',
+                          })
+                        }
+                        className="rounded bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 border border-slate-200 hover:bg-slate-100 cursor-pointer"
+                      >
+                        + Contact Notice
+                      </button>
+                    </div>
+
+                    <textarea
+                      rows={18}
+                      value={legalDoc.content}
+                      onChange={(e) => setLegalDoc({ ...legalDoc, content: e.target.value })}
+                      placeholder="Write policy clauses, terms of service, governance bylaws, data protection rules…"
+                      className="w-full rounded-xl border border-slate-300 p-3.5 text-xs text-slate-800 font-mono leading-relaxed focus:outline-none focus:border-[#1540a8] shadow-inner"
+                    />
+
+                    <div className="flex items-center justify-between text-[11px] text-slate-400 mt-2">
+                      <span>{legalDoc.content.length} characters</span>
+                      <span>Auto-renders live preview on the right</span>
+                    </div>
+                  </div>
+
+                  <div className="pt-2 flex justify-end">
+                    <button
+                      type="button"
+                      onClick={handleSaveLegal}
+                      disabled={legalSaving}
+                      className="inline-flex items-center gap-1.5 rounded-lg bg-[#1540a8] hover:bg-[#07174a] text-white px-6 py-2.5 text-xs font-bold transition shadow cursor-pointer disabled:opacity-50"
+                    >
+                      {legalSaving ? 'Saving…' : 'Save & Publish Changes'}
+                    </button>
+                  </div>
+                </div>
+              </div>
+
+              {/* Right Column: Live Formatted Public Preview */}
+              <div className="lg:col-span-5 sticky top-[130px]">
+                <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm max-h-[80vh] flex flex-col">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-200 mb-4 shrink-0">
+                    <div className="flex items-center gap-2">
+                      <Eye className="h-4 w-4 text-[#1540a8]" />
+                      <h3 className="font-serif-heading text-sm font-bold text-[#07174a]">
+                        Live Public Preview
+                      </h3>
+                    </div>
+                    <span className="text-[10px] text-slate-400">
+                      As seen on {activeLegalDoc === 'terms' ? '/terms' : '/privacy'}
+                    </span>
+                  </div>
+
+                  <div className="flex-1 overflow-y-auto pr-2">
+                    <div className="rounded-xl border border-slate-200 bg-[#faf8f5] p-5 shadow-xs">
+                      <div className="flex flex-wrap items-center justify-between gap-1 mb-2">
+                        <span className="text-[9px] font-bold uppercase tracking-widest text-[#1540a8] bg-blue-50 px-2 py-0.5 rounded">
+                          {legalDoc.categoryBadge || 'Legal'}
+                        </span>
+                        {legalDoc.lastUpdated && (
+                          <span className="text-[10px] text-slate-400">
+                            Updated: {legalDoc.lastUpdated}
+                          </span>
+                        )}
+                      </div>
+
+                      <h2 className="font-serif-heading text-lg font-bold text-[#07174a] pb-2 border-b border-slate-200 mb-4">
+                        {legalDoc.title || 'Untitled Policy'}
+                      </h2>
+
+                      <LegalContentRenderer content={legalDoc.content} />
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
           </div>
         )}

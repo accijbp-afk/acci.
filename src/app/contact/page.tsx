@@ -11,7 +11,7 @@ export default function ContactPage() {
     name: '',
     email: '',
     phone: '',
-    subject: 'General Inquiry',
+    subject: 'Collaborations & Strategic Partnerships',
     message: '',
   });
 
@@ -25,7 +25,7 @@ export default function ContactPage() {
         name: '',
         email: '',
         phone: '',
-        subject: 'General Inquiry',
+        subject: 'Collaborations & Strategic Partnerships',
         message: '',
       });
     } catch {
@@ -155,11 +155,21 @@ export default function ContactPage() {
                         onChange={(e) => setForm({ ...form, subject: e.target.value })}
                         className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 focus:outline-none focus:border-[#1540a8]"
                       >
-                        <option value="General Inquiry">General Inquiry</option>
-                        <option value="Membership Verification">Membership Verification</option>
-                        <option value="Event Delegate Pass">Event Delegate Pass</option>
-                        <option value="Trade Dispute Mediation">Trade Dispute Mediation</option>
-                        <option value="Advertising / Spotlight">Community Spotlight / Sponsorship</option>
+                        <option value="Collaborations & Strategic Partnerships">
+                          Collaborations &amp; Strategic Partnerships
+                        </option>
+                        <option value="Inquiries on Upcoming Events & Programs">
+                          Information on Upcoming Events &amp; Programs
+                        </option>
+                        <option value="General Queries & Public Information">
+                          General Queries &amp; Public Information
+                        </option>
+                        <option value="Membership Verification & Affiliation">
+                          Membership Verification &amp; Affiliation
+                        </option>
+                        <option value="Other Matters / Miscellaneous Inquiries">
+                          Other Matters / Miscellaneous Inquiries
+                        </option>
                       </select>
                     </div>
                   </div>

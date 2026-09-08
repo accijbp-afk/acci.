@@ -163,3 +163,12 @@ export interface GalleryAlbum {
   createdAt?: string;
 }
 
+export interface LegalDocument {
+  $id?: string;
+  id: 'terms' | 'privacy';
+  title: string;
+  categoryBadge: string;
+  lastUpdated?: string;
+  content: string;
+}
+
