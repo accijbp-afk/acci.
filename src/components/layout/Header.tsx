@@ -106,7 +106,7 @@ export const Header: React.FC = () => {
               <span>{t('Agrawal Chambers of Commerce and Industries')}</span>
             </div>
             <div className="text-[10px] tracking-wider text-amber-300 font-semibold uppercase">
-              {t('ACCI • Jabalpur')}
+              {t('Empowering Agrawal Enterprise')}
             </div>
           </div>
         </Link>

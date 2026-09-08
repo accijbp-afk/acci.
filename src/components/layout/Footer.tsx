@@ -55,7 +55,7 @@ export const Footer: React.FC = () => {
                   {t('Agrawal Chambers of Commerce and Industries')}
                 </span>
                 <span className="text-xs text-amber-300/80 tracking-wider uppercase font-medium">
-                  {t('ACCI • Jabalpur')}
+                  {t('Empowering Agrawal Enterprise')}
                 </span>
               </div>
             </div>

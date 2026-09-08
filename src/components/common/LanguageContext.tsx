@@ -33,6 +33,7 @@ const MASTER_DICTIONARY: Record<string, string> = {
   'Jabalpur (M.P.)': 'जबलपुर (म.प्र.)',
   'ACCI • Jabalpur': 'एसीसीआई • जबलपुर',
   'ACCI Jabalpur': 'एसीसीआई जबलपुर',
+  'Empowering Agrawal Enterprise': 'अग्रवाल उद्यम सशक्तिकरण',
   'Apex Agrawal Trade Body • Jabalpur': 'शीर्ष अग्रवाल व्यापार परिसंघ • जबलपुर',
 
   // Navigation Links & Buttons
