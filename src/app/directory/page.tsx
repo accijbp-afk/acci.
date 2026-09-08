@@ -73,7 +73,8 @@ function DirectoryContent() {
 
   const handleOpenDetail = (biz: MemberBusiness) => {
     setActiveModalMember(biz);
-    membersService.getReviews(biz.id).then(setVendorReviews);
+    const vId = biz.id || biz.$id || '';
+    membersService.getReviews(vId, biz.$id).then(setVendorReviews);
   };
 
   const handleOpenReview = (biz: MemberBusiness) => {
@@ -87,7 +88,7 @@ function DirectoryContent() {
     if (!targetVendor || !reviewerName || !reviewText) return;
 
     await membersService.addReview({
-      vendorId: targetVendor.id,
+      vendorId: targetVendor.id || targetVendor.$id || '',
       businessName: targetVendor.businessName,
       reviewerName,
       rating: reviewRating,
@@ -457,31 +458,58 @@ function DirectoryContent() {
             {/* Reviews Section */}
             <div className="border-t border-slate-200 pt-4 mt-4">
               <div className="flex items-center justify-between mb-3">
-                <h4 className="font-serif-heading text-sm font-bold text-[#07174a]">
-                  Community Reviews & Ratings
-                </h4>
+                <div className="flex items-center gap-2">
+                  <h4 className="font-serif-heading text-sm font-bold text-[#07174a]">
+                    Community Reviews & Ratings
+                  </h4>
+                  {vendorReviews.length > 0 && (
+                    <span className="rounded bg-amber-100 px-2 py-0.5 text-[11px] font-bold text-amber-800">
+                      {(
+                        vendorReviews.reduce((sum, r) => sum + r.rating, 0) / vendorReviews.length
+                      ).toFixed(1)} ★ ({vendorReviews.length})
+                    </span>
+                  )}
+                </div>
                 <button
                   onClick={() => {
                     setActiveModalMember(null);
                     handleOpenReview(activeModalMember);
                   }}
-                  className="text-xs font-bold text-[#1540a8] hover:underline"
+                  className="text-xs font-bold text-[#1540a8] hover:underline cursor-pointer"
                 >
                   + Write a Review
                 </button>
               </div>
 
               {vendorReviews.length === 0 ? (
-                <p className="text-xs text-slate-400 italic">No approved reviews yet. Be the first to review!</p>
+                <div className="rounded-xl border border-dashed border-slate-200 p-4 text-center">
+                  <p className="text-xs text-slate-400 italic">No approved reviews yet. Be the first to share your experience!</p>
+                  <button
+                    onClick={() => {
+                      setActiveModalMember(null);
+                      handleOpenReview(activeModalMember);
+                    }}
+                    className="mt-2 text-xs font-bold text-[#1540a8] underline hover:text-[#07174a] cursor-pointer"
+                  >
+                    Click here to write the first review
+                  </button>
+                </div>
               ) : (
-                <div className="space-y-2 max-h-48 overflow-y-auto pr-1">
+                <div className="space-y-2.5 max-h-56 overflow-y-auto pr-1">
                   {vendorReviews.map((rev) => (
-                    <div key={rev.id} className="rounded-lg bg-slate-50 p-3 text-xs border border-slate-100">
-                      <div className="flex items-center justify-between mb-1">
-                        <span className="font-bold text-slate-800">{rev.reviewerName}</span>
-                        <span className="text-amber-500">{'★'.repeat(rev.rating)}</span>
+                    <div key={rev.$id || rev.id} className="rounded-xl bg-slate-50 p-3 text-xs border border-slate-100 shadow-2xs">
+                      <div className="flex items-center justify-between mb-1.5">
+                        <div className="flex items-center gap-2">
+                          <span className="font-bold text-slate-800">{rev.reviewerName}</span>
+                          {rev.createdAt && (
+                            <span className="text-[10px] text-slate-400">
+                              • {new Date(rev.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                            </span>
+                          )}
+                        </div>
+                        <span className="text-amber-500 font-bold tracking-tight">{'★'.repeat(rev.rating)}</span>
                       </div>
-                      <p className="text-slate-600">{rev.reviewText}</p>
+                      <p className="text-slate-600 leading-relaxed pl-0.5">{rev.reviewText}</p>
                     </div>
                   ))}
                 </div>

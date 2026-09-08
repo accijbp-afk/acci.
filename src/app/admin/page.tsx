@@ -46,6 +46,10 @@ import {
   Check,
   Edit3,
   X,
+  Send,
+  AlertCircle,
+  Key,
+  Settings,
 } from 'lucide-react';
 import { legalService } from '@/services/appwrite/legal';
 import { notificationService } from '@/services/notifications';
@@ -55,7 +59,7 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'vendors' | 'accounts' | 'events' | 'gallery' | 'news' | 'jobs' | 'inquiries' | 'reviews' | 'legal'
+    'overview' | 'vendors' | 'accounts' | 'events' | 'gallery' | 'news' | 'jobs' | 'inquiries' | 'reviews' | 'legal' | 'email'
   >('overview');
 
   // Data states
@@ -68,6 +72,37 @@ export default function AdminDashboard() {
   const [inquiries, setInquiries] = useState<ContactSubmission[]>([]);
   const [reviews, setReviews] = useState<BusinessReview[]>([]);
   const [loading, setLoading] = useState(true);
+
+  // Email & Notifications State
+  const [smtpStatus, setSmtpStatus] = useState<{
+    configured: boolean;
+    user: string | null;
+    defaultAdminEmail: string;
+    recentNotifications: Array<{
+      timestamp: string;
+      to: string;
+      subject: string;
+      type: string;
+      status: 'delivered' | 'simulated' | 'failed';
+      error?: string;
+    }>;
+  }>({
+    configured: false,
+    user: null,
+    defaultAdminEmail: 'accjbp@gmail.com',
+    recentNotifications: [],
+  });
+  const [smtpLoading, setSmtpLoading] = useState(false);
+  const [testEmailLoading, setTestEmailLoading] = useState(false);
+  const [testEmailResult, setTestEmailResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [smtpForm, setSmtpForm] = useState({
+    user: 'accjbp@gmail.com',
+    pass: '',
+    adminEmail: 'accjbp@gmail.com',
+  });
+  const [savingSmtp, setSavingSmtp] = useState(false);
+  const [saveSmtpResult, setSaveSmtpResult] = useState<{ success: boolean; message: string } | null>(null);
+  const [showPassword, setShowPassword] = useState(false);
 
   // Legal Policies State
   const [activeLegalDoc, setActiveLegalDoc] = useState<'terms' | 'privacy'>('terms');
@@ -143,6 +178,7 @@ export default function AdminDashboard() {
     } catch {
       // Fallback already provided in state
     }
+    loadSmtpStatus();
     setLoading(false);
   };
 
@@ -408,7 +444,133 @@ export default function AdminDashboard() {
 
   const handleReviewStatus = async (id: string, status: 'approved' | 'pending') => {
     await membersService.updateReviewStatus(id, status);
+    const targetRev = reviews.find((r) => r.id === id || r.$id === id);
+    if (targetRev && status === 'approved') {
+      const targetBiz = vendors.find(
+        (v) =>
+          v.id === targetRev.vendorId ||
+          v.$id === targetRev.vendorId ||
+          v.businessName.toLowerCase() === targetRev.businessName.toLowerCase()
+      );
+      if (targetBiz?.email) {
+        notificationService.notifyMember(targetBiz.email, {
+          event: 'NEW_REVIEW_RECEIVED',
+          title: `New Verified Review Published: ${targetRev.businessName}`,
+          subtitle: `A customer review from ${targetRev.reviewerName} (${targetRev.rating}★) has been approved by the Secretariat and is now live on your Chamber directory profile.`,
+          details: [
+            { label: 'Reviewer Name', value: targetRev.reviewerName },
+            { label: 'Rating', value: `${targetRev.rating} / 5 Stars` },
+            { label: 'Feedback', value: targetRev.reviewText },
+            { label: 'Published Listing', value: targetRev.businessName },
+          ],
+          actionText: 'View Chamber Listing',
+          actionUrl: '/directory',
+        });
+      }
+    }
     loadAllData();
+  };
+
+  const handleDeleteReview = async (id: string) => {
+    if (confirm('Are you sure you want to permanently delete this review?')) {
+      await membersService.deleteReview(id);
+      loadAllData();
+    }
+  };
+
+  const loadSmtpStatus = async () => {
+    setSmtpLoading(true);
+    try {
+      const res = await fetch('/api/notify');
+      const data = await res.json();
+      setSmtpStatus({
+        configured: Boolean(data.smtpConfigured),
+        user: data.configuredUser || null,
+        defaultAdminEmail: data.defaultAdminEmail || 'accjbp@gmail.com',
+        recentNotifications: data.recentNotifications || [],
+      });
+      if (data.defaultAdminEmail) {
+        setSmtpForm((prev) => ({ ...prev, adminEmail: data.defaultAdminEmail }));
+      }
+    } catch (e) {
+      console.warn('Failed to load SMTP status', e);
+    } finally {
+      setSmtpLoading(false);
+    }
+  };
+
+  const handleSendTestEmail = async () => {
+    setTestEmailLoading(true);
+    setTestEmailResult(null);
+    try {
+      const res = await fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'test_smtp',
+          to: smtpForm.adminEmail || 'accjbp@gmail.com',
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setTestEmailResult({
+          success: true,
+          message: data.message || `Test email successfully delivered to ${data.recipient || 'accjbp@gmail.com'}!`,
+        });
+      } else {
+        setTestEmailResult({
+          success: false,
+          message: data.error || 'Failed to dispatch test email. Please verify credentials.',
+        });
+      }
+      loadSmtpStatus();
+    } catch (err: unknown) {
+      setTestEmailResult({
+        success: false,
+        message: err instanceof Error ? err.message : 'Network error attempting to send test email.',
+      });
+    } finally {
+      setTestEmailLoading(false);
+    }
+  };
+
+  const handleSaveSmtp = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingSmtp(true);
+    setSaveSmtpResult(null);
+    try {
+      const res = await fetch('/api/notify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'save_smtp',
+          user: smtpForm.user.trim(),
+          pass: smtpForm.pass.trim(),
+          adminEmail: smtpForm.adminEmail.trim() || 'accjbp@gmail.com',
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success) {
+        setSaveSmtpResult({
+          success: true,
+          message: data.message || 'Credentials successfully verified and saved! Live email delivery is active.',
+        });
+        setSmtpForm((prev) => ({ ...prev, pass: '' }));
+        loadSmtpStatus();
+      } else {
+        setSaveSmtpResult({
+          success: false,
+          message: data.error || 'Failed to verify SMTP credentials.',
+        });
+      }
+    } catch (err: unknown) {
+      setSaveSmtpResult({
+        success: false,
+        message: err instanceof Error ? err.message : 'Network error testing SMTP credentials.',
+      });
+    } finally {
+      setSavingSmtp(false);
+    }
   };
 
   const handleSwitchLegalDoc = async (type: 'terms' | 'privacy') => {
@@ -527,6 +689,7 @@ export default function AdminDashboard() {
             { id: 'jobs', label: `Jobs (${jobs.length})`, icon: Briefcase },
             { id: 'inquiries', label: `Inquiries (${inquiries.length})`, icon: Mail },
             { id: 'reviews', label: `Reviews (${reviews.length})`, icon: Star },
+            { id: 'email', label: 'Email Alerts', icon: Send },
             { id: 'legal', label: 'Legal Policies', icon: FileText },
           ].map((tab) => {
             const Icon = tab.icon;
@@ -1062,52 +1225,90 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 7: REVIEWS MODERATION */}
+        {/* TAB 8: REVIEWS MODERATION */}
         {activeTab === 'reviews' && (
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="font-serif-heading text-lg font-bold text-[#07174a] mb-1">
-              Customer & Vendor Reviews Moderation
-            </h2>
-            <p className="text-xs text-slate-500 mb-6">Approve genuine customer reviews before they appear on public business cards.</p>
-
-            <div className="space-y-3">
-              {reviews.map((rev) => (
-                <div key={rev.id} className="rounded-xl border border-slate-200 p-4 text-xs flex items-center justify-between gap-4">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <strong className="text-slate-800">{rev.reviewerName}</strong>
-                      <span className="text-amber-500">{'★'.repeat(rev.rating)}</span>
-                      <span className="text-slate-400">for {rev.businessName}</span>
-                    </div>
-                    <p className="text-slate-600 mt-1">{rev.reviewText}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span
-                      className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
-                        rev.status === 'approved' ? 'bg-emerald-50 text-emerald-700' : 'bg-amber-50 text-amber-700'
-                      }`}
-                    >
-                      {rev.status}
-                    </span>
-                    {rev.status !== 'approved' ? (
-                      <button
-                        onClick={() => handleReviewStatus(rev.id, 'approved')}
-                        className="rounded bg-emerald-600 px-2 py-1 text-[11px] font-bold text-white hover:bg-emerald-700 cursor-pointer"
-                      >
-                        Approve
-                      </button>
-                    ) : (
-                      <button
-                        onClick={() => handleReviewStatus(rev.id, 'pending')}
-                        className="rounded bg-slate-200 px-2 py-1 text-[11px] text-slate-700 hover:bg-slate-300 cursor-pointer"
-                      >
-                        Unapprove
-                      </button>
-                    )}
-                  </div>
-                </div>
-              ))}
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="font-serif-heading text-lg font-bold text-[#07174a]">
+                  Customer & Vendor Reviews Moderation
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Approve genuine customer reviews before they appear on public business cards in the directory.
+                </p>
+              </div>
+              <button
+                onClick={loadAllData}
+                className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                Refresh
+              </button>
             </div>
+
+            {reviews.length === 0 ? (
+              <div className="text-center py-12 text-xs text-slate-400">
+                No customer reviews submitted yet.
+              </div>
+            ) : (
+              <div className="space-y-3">
+                {reviews.map((rev) => (
+                  <div
+                    key={rev.$id || rev.id}
+                    className="rounded-xl border border-slate-200 p-4 text-xs flex flex-col md:flex-row md:items-center justify-between gap-4"
+                  >
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <strong className="text-slate-800 text-sm">{rev.reviewerName}</strong>
+                        <span className="text-amber-500 font-bold">{'★'.repeat(rev.rating)}</span>
+                        <span className="text-slate-400">for <strong className="text-slate-700">{rev.businessName}</strong></span>
+                        {rev.createdAt && (
+                          <span className="text-slate-400 text-[11px]">
+                            • {new Date(rev.createdAt).toLocaleDateString('en-IN', { day: 'numeric', month: 'short', year: 'numeric' })}
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-slate-600 mt-1.5 leading-relaxed bg-slate-50 p-2.5 rounded-lg border border-slate-100 italic">
+                        "{rev.reviewText}"
+                      </p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span
+                        className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                          rev.status === 'approved'
+                            ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                            : 'bg-amber-50 text-amber-700 border border-amber-200'
+                        }`}
+                      >
+                        {rev.status}
+                      </span>
+                      {rev.status !== 'approved' ? (
+                        <button
+                          onClick={() => handleReviewStatus(rev.$id || rev.id, 'approved')}
+                          className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 cursor-pointer shadow-xs transition-colors"
+                        >
+                          ✓ Approve
+                        </button>
+                      ) : (
+                        <button
+                          onClick={() => handleReviewStatus(rev.$id || rev.id, 'pending')}
+                          className="rounded-lg bg-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-300 cursor-pointer transition-colors"
+                        >
+                          Unapprove
+                        </button>
+                      )}
+                      <button
+                        onClick={() => handleDeleteReview(rev.$id || rev.id)}
+                        className="rounded-lg bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 cursor-pointer transition-colors"
+                        title="Permanently Delete Review"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -1384,6 +1585,348 @@ export default function AdminDashboard() {
                   </div>
                 </div>
               </div>
+            </div>
+          </div>
+        )}
+
+        {/* TAB 10: EMAIL & NOTIFICATIONS */}
+        {activeTab === 'email' && (
+          <div className="space-y-6">
+            {/* Top Status Header */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2.5">
+                    <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-[#07174a] text-white">
+                      <Send className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h2 className="font-serif-heading text-lg font-bold text-[#07174a]">
+                        Secretariat Email & Notification Center
+                      </h2>
+                      <p className="text-xs text-slate-500">
+                        Manage automated alerts dispatched to <strong>accjbp@gmail.com</strong> and registered member inboxes.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2.5">
+                  <button
+                    onClick={loadSmtpStatus}
+                    disabled={smtpLoading}
+                    className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer disabled:opacity-50"
+                  >
+                    <RefreshCw className={`h-3.5 w-3.5 ${smtpLoading ? 'animate-spin' : ''}`} />
+                    Refresh Status
+                  </button>
+                </div>
+              </div>
+
+              {/* Status Indicator Banner */}
+              <div className="mt-5 grid grid-cols-1 md:grid-cols-3 gap-4 pt-4 border-t border-slate-100">
+                <div className="rounded-xl border p-4 bg-slate-50/70 border-slate-200">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                    Delivery Status
+                  </span>
+                  <div className="flex items-center gap-2">
+                    <span
+                      className={`h-2.5 w-2.5 rounded-full ${
+                        smtpStatus.configured ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'
+                      }`}
+                    />
+                    <span className="text-sm font-bold text-slate-800">
+                      {smtpStatus.configured ? 'Live SMTP Active' : 'Simulation Mode'}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    {smtpStatus.configured
+                      ? 'Emails are delivered to actual recipients.'
+                      : 'Emails are logged in memory only until credentials are connected.'}
+                  </p>
+                </div>
+
+                <div className="rounded-xl border p-4 bg-slate-50/70 border-slate-200">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                    Chamber Alert Recipient
+                  </span>
+                  <div className="text-sm font-bold text-[#07174a] font-mono truncate">
+                    {smtpStatus.defaultAdminEmail || 'accjbp@gmail.com'}
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Receives new account, review, job, &amp; inquiry alerts.
+                  </p>
+                </div>
+
+                <div className="rounded-xl border p-4 bg-slate-50/70 border-slate-200">
+                  <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400 block mb-1">
+                    Connected Sender
+                  </span>
+                  <div className="text-sm font-bold text-slate-800 font-mono truncate">
+                    {smtpStatus.user || 'Not connected yet'}
+                  </div>
+                  <p className="text-[11px] text-slate-500 mt-1">
+                    Outbound SMTP account for ACCI Jabalpur.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Live Diagnostics & Test Email Action */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <h3 className="font-serif-heading text-base font-bold text-[#07174a]">
+                    Instant Live Email Test
+                  </h3>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    Send a test notification to verify delivery to your inbox ({smtpForm.adminEmail || 'accjbp@gmail.com'}).
+                  </p>
+                </div>
+                <button
+                  onClick={handleSendTestEmail}
+                  disabled={testEmailLoading}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#07174a] px-4 py-2.5 text-xs font-bold text-white hover:bg-[#1540a8] transition-colors cursor-pointer disabled:opacity-50 shadow-xs"
+                >
+                  <Send className={`h-4 w-4 ${testEmailLoading ? 'animate-bounce' : ''}`} />
+                  <span>{testEmailLoading ? 'Sending Test Email…' : 'Send Test Email Now'}</span>
+                </button>
+              </div>
+
+              {testEmailResult && (
+                <div
+                  className={`mt-4 rounded-xl p-4 text-xs font-medium border flex items-start gap-2.5 ${
+                    testEmailResult.success
+                      ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                      : 'bg-rose-50 text-rose-800 border-rose-200'
+                  }`}
+                >
+                  {testEmailResult.success ? (
+                    <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                  ) : (
+                    <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                  )}
+                  <div className="flex-1 leading-relaxed">
+                    <strong className="block mb-0.5">
+                      {testEmailResult.success ? 'Delivery Verified!' : 'Dispatch Notice:'}
+                    </strong>
+                    {testEmailResult.message}
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {/* Gmail Connection & App Password Setup */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              {/* Form Card */}
+              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+                <div className="flex items-center gap-2 mb-4">
+                  <Key className="h-5 w-5 text-amber-600" />
+                  <h3 className="font-serif-heading text-base font-bold text-[#07174a]">
+                    Connect Google / Gmail App Password
+                  </h3>
+                </div>
+                <p className="text-xs text-slate-500 mb-5 leading-relaxed">
+                  Enter your Google Account email and the 16-character Google App Password. This will enable real-time delivery to <strong>accjbp@gmail.com</strong> and member inboxes.
+                </p>
+
+                {saveSmtpResult && (
+                  <div
+                    className={`mb-5 rounded-xl p-3.5 text-xs border flex items-start gap-2.5 ${
+                      saveSmtpResult.success
+                        ? 'bg-emerald-50 text-emerald-800 border-emerald-200'
+                        : 'bg-rose-50 text-rose-800 border-rose-200'
+                    }`}
+                  >
+                    {saveSmtpResult.success ? (
+                      <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0 mt-0.5" />
+                    ) : (
+                      <AlertCircle className="h-4 w-4 text-rose-600 shrink-0 mt-0.5" />
+                    )}
+                    <div className="flex-1 leading-relaxed">
+                      {saveSmtpResult.message}
+                    </div>
+                  </div>
+                )}
+
+                <form onSubmit={handleSaveSmtp} className="space-y-4 text-xs">
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      Sender Gmail Address *
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={smtpForm.user}
+                      onChange={(e) => setSmtpForm({ ...smtpForm, user: e.target.value })}
+                      placeholder="accjbp@gmail.com"
+                      className="w-full rounded-xl border border-slate-300 p-2.5 text-xs text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                    />
+                  </div>
+
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block font-semibold text-slate-700">
+                        16-Character Google App Password *
+                      </label>
+                      <button
+                        type="button"
+                        onClick={() => setShowPassword(!showPassword)}
+                        className="text-[11px] text-[#1540a8] hover:underline cursor-pointer font-medium"
+                      >
+                        {showPassword ? 'Hide Password' : 'Show Password'}
+                      </button>
+                    </div>
+                    <input
+                      type={showPassword ? 'text' : 'password'}
+                      required
+                      value={smtpForm.pass}
+                      onChange={(e) => setSmtpForm({ ...smtpForm, pass: e.target.value })}
+                      placeholder="e.g. abcd efgh ijkl mnop"
+                      className="w-full rounded-xl border border-slate-300 p-2.5 text-xs font-mono text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                    />
+                    <span className="text-[11px] text-slate-400 mt-1 block">
+                      Generated from your Google Security Settings (spaces are automatically ignored).
+                    </span>
+                  </div>
+
+                  <div>
+                    <label className="block font-semibold text-slate-700 mb-1">
+                      Secretariat Notification Inbox
+                    </label>
+                    <input
+                      type="email"
+                      required
+                      value={smtpForm.adminEmail}
+                      onChange={(e) => setSmtpForm({ ...smtpForm, adminEmail: e.target.value })}
+                      placeholder="accjbp@gmail.com"
+                      className="w-full rounded-xl border border-slate-300 p-2.5 text-xs text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                    />
+                    <span className="text-[11px] text-slate-400 mt-1 block">
+                      Where Chamber admin alerts will be delivered.
+                    </span>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={savingSmtp || !smtpForm.user || !smtpForm.pass}
+                    className="w-full rounded-xl bg-emerald-700 py-3 text-xs font-bold text-white hover:bg-emerald-800 transition-colors cursor-pointer disabled:opacity-50 flex items-center justify-center gap-2 shadow-xs"
+                  >
+                    <Check className={`h-4 w-4 ${savingSmtp ? 'animate-spin' : ''}`} />
+                    <span>{savingSmtp ? 'Verifying & Saving Connection…' : 'Verify & Connect Live Email'}</span>
+                  </button>
+                </form>
+              </div>
+
+              {/* Instructions Guide Card */}
+              <div className="rounded-2xl border border-amber-200 bg-amber-50/40 p-6 shadow-xs flex flex-col justify-between">
+                <div>
+                  <div className="flex items-center gap-2 mb-3">
+                    <span className="flex h-6 w-6 items-center justify-center rounded-full bg-amber-500 text-white font-bold text-xs">
+                      i
+                    </span>
+                    <h3 className="font-serif-heading text-sm font-bold text-[#07174a]">
+                      How to get a Google App Password in 60 Seconds
+                    </h3>
+                  </div>
+
+                  <ol className="space-y-3 text-xs text-slate-700 pl-1 list-decimal list-inside leading-relaxed">
+                    <li>
+                      Log into your Google Account (<strong>accjbp@gmail.com</strong>).
+                    </li>
+                    <li>
+                      Go to Google Security:{' '}
+                      <a
+                        href="https://myaccount.google.com/apppasswords"
+                        target="_blank"
+                        rel="noreferrer"
+                        className="font-bold text-[#1540a8] underline inline-flex items-center gap-1"
+                      >
+                        myaccount.google.com/apppasswords
+                        <ExternalLink className="h-3 w-3 inline" />
+                      </a>
+                    </li>
+                    <li>
+                      Ensure <strong>2-Step Verification</strong> is ON on your Google account.
+                    </li>
+                    <li>
+                      Under <em>App name</em>, type <strong>ACCI Jabalpur</strong> and click <strong>Create</strong>.
+                    </li>
+                    <li>
+                      Google will display a yellow box with a <strong>16-letter password</strong> (e.g. <code className="bg-amber-100 px-1 py-0.5 rounded font-mono text-amber-900">wxyz abcd efgh ijkl</code>).
+                    </li>
+                    <li>
+                      Copy and paste that password into the form on the left and click <strong>Verify &amp; Connect</strong>.
+                    </li>
+                  </ol>
+                </div>
+
+                <div className="mt-6 rounded-xl bg-white p-4 border border-amber-200 text-xs text-slate-600">
+                  <strong className="text-[#07174a] block mb-1">🔒 Safe &amp; Direct Connection:</strong>
+                  Your credentials connect directly to Google's official SMTP server (<code className="font-mono text-slate-800">smtp.gmail.com:465</code>) and are safely stored in your Chamber database.
+                </div>
+              </div>
+            </div>
+
+            {/* Notification History Table */}
+            <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+              <h3 className="font-serif-heading text-base font-bold text-[#07174a] mb-1">
+                Recent Outgoing Notifications Log
+              </h3>
+              <p className="text-xs text-slate-500 mb-4">
+                History of recently triggered email notifications across the ACCI portal.
+              </p>
+
+              {smtpStatus.recentNotifications.length === 0 ? (
+                <p className="text-xs text-slate-400 italic py-6 text-center">
+                  No notifications triggered yet in this session.
+                </p>
+              ) : (
+                <div className="overflow-x-auto">
+                  <table className="w-full text-xs text-left">
+                    <thead>
+                      <tr className="border-b border-slate-200 text-slate-400 uppercase text-[10px] tracking-wider font-bold">
+                        <th className="py-2.5 pr-4">Timestamp</th>
+                        <th className="py-2.5 px-4">Target</th>
+                        <th className="py-2.5 px-4">Recipient</th>
+                        <th className="py-2.5 px-4">Subject</th>
+                        <th className="py-2.5 pl-4 text-right">Status</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100">
+                      {smtpStatus.recentNotifications.map((n, idx) => (
+                        <tr key={idx} className="hover:bg-slate-50">
+                          <td className="py-3 pr-4 text-slate-500 font-mono text-[11px] whitespace-nowrap">
+                            {new Date(n.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' })}
+                          </td>
+                          <td className="py-3 px-4 font-bold uppercase text-[10px] text-slate-600">
+                            {n.type}
+                          </td>
+                          <td className="py-3 px-4 font-mono text-slate-800">
+                            {n.to}
+                          </td>
+                          <td className="py-3 px-4 text-slate-700 font-medium truncate max-w-xs">
+                            {n.subject}
+                          </td>
+                          <td className="py-3 pl-4 text-right">
+                            <span
+                              className={`px-2 py-0.5 rounded text-[10px] font-bold uppercase ${
+                                n.status === 'delivered'
+                                  ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                  : n.status === 'failed'
+                                  ? 'bg-rose-50 text-rose-700 border border-rose-200'
+                                  : 'bg-amber-50 text-amber-700 border border-amber-200'
+                              }`}
+                            >
+                              {n.status}
+                            </span>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              )}
             </div>
           </div>
         )}

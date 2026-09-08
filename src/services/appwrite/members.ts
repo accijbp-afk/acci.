@@ -399,7 +399,7 @@ export const membersService = {
     return null;
   },
 
-  async getReviews(vendorId: string): Promise<BusinessReview[]> {
+  async getReviews(vendorId: string, alternateId?: string): Promise<BusinessReview[]> {
     if (isAppwriteConfigured()) {
       try {
         const res = await databases.listDocuments(
@@ -407,13 +407,28 @@ export const membersService = {
           APPWRITE_CONFIG.collections.reviews,
           [Query.equal('vendorId', vendorId), Query.equal('status', 'approved')]
         );
-        return res.documents as unknown as BusinessReview[];
-      } catch {
-        // Fall back
+        let docs = res.documents as unknown as BusinessReview[];
+        if (docs.length === 0 && alternateId && alternateId !== vendorId) {
+          const res2 = await databases.listDocuments(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.reviews,
+            [Query.equal('vendorId', alternateId), Query.equal('status', 'approved')]
+          );
+          docs = res2.documents as unknown as BusinessReview[];
+        }
+        if (docs.length > 0) {
+          return docs;
+        }
+      } catch (err) {
+        console.warn('Appwrite getReviews notice:', err);
       }
     }
     const all = getLocalReviews();
-    return all.filter((r) => r.vendorId === vendorId && r.status === 'approved');
+    return all.filter(
+      (r) =>
+        (r.vendorId === vendorId || (alternateId && r.vendorId === alternateId)) &&
+        r.status === 'approved'
+    );
   },
 
   async getAllReviewsAdmin(): Promise<BusinessReview[]> {
@@ -422,7 +437,7 @@ export const membersService = {
         const res = await databases.listDocuments(
           APPWRITE_CONFIG.databaseId,
           APPWRITE_CONFIG.collections.reviews,
-          [Query.limit(100)]
+          [Query.limit(100), Query.orderDesc('$createdAt')]
         );
         return res.documents as unknown as BusinessReview[];
       } catch {
@@ -442,14 +457,17 @@ export const membersService = {
 
     if (isAppwriteConfigured()) {
       try {
-        await databases.createDocument(
+        const doc = await databases.createDocument(
           APPWRITE_CONFIG.databaseId,
           APPWRITE_CONFIG.collections.reviews,
           ID.unique(),
           newRev
         );
-      } catch {
-        // Fall back
+        if (doc?.$id) {
+          newRev.$id = doc.$id;
+        }
+      } catch (err) {
+        console.warn('Appwrite addReview notice:', err);
       }
     }
 
@@ -462,6 +480,37 @@ export const membersService = {
   },
 
   async updateReviewStatus(id: string, status: 'approved' | 'pending'): Promise<boolean> {
+    if (isAppwriteConfigured()) {
+      try {
+        let docId = id;
+        try {
+          await databases.updateDocument(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.reviews,
+            docId,
+            { status }
+          );
+        } catch {
+          // If id is not docId, find by id attribute
+          const found = await databases.listDocuments(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.reviews,
+            [Query.equal('id', id), Query.limit(1)]
+          );
+          if (found.documents.length > 0) {
+            await databases.updateDocument(
+              APPWRITE_CONFIG.databaseId,
+              APPWRITE_CONFIG.collections.reviews,
+              found.documents[0].$id,
+              { status }
+            );
+          }
+        }
+      } catch (err) {
+        console.warn('Appwrite update review error:', err);
+      }
+    }
+
     const list = getLocalReviews();
     const idx = list.findIndex((r) => r.id === id || r.$id === id);
     if (idx !== -1) {
@@ -469,8 +518,43 @@ export const membersService = {
       if (typeof window !== 'undefined') {
         localStorage.setItem(LOCAL_STORAGE_REVIEWS_KEY, JSON.stringify(list));
       }
-      return true;
     }
-    return false;
+    return true;
+  },
+
+  async deleteReview(id: string): Promise<boolean> {
+    if (isAppwriteConfigured()) {
+      try {
+        let docId = id;
+        try {
+          await databases.deleteDocument(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.reviews,
+            docId
+          );
+        } catch {
+          const found = await databases.listDocuments(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.reviews,
+            [Query.equal('id', id), Query.limit(1)]
+          );
+          if (found.documents.length > 0) {
+            await databases.deleteDocument(
+              APPWRITE_CONFIG.databaseId,
+              APPWRITE_CONFIG.collections.reviews,
+              found.documents[0].$id
+            );
+          }
+        }
+      } catch (err) {
+        console.warn('Appwrite delete review error:', err);
+      }
+    }
+
+    const list = getLocalReviews().filter((r) => r.id !== id && r.$id !== id);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_REVIEWS_KEY, JSON.stringify(list));
+    }
+    return true;
   },
 };
