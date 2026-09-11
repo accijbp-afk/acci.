@@ -10,6 +10,7 @@ import { galleryService } from '@/services/appwrite/gallery';
 import { newsService } from '@/services/appwrite/news';
 import { jobsService } from '@/services/appwrite/jobs';
 import { inquiriesService } from '@/services/appwrite/inquiries';
+import { storiesService } from '@/services/appwrite/stories';
 import {
   UserProfile,
   MemberBusiness,
@@ -19,6 +20,7 @@ import {
   JobListing,
   ContactSubmission,
   BusinessReview,
+  ImpactStory,
   LegalDocument,
 } from '@/types';
 import {
@@ -31,6 +33,8 @@ import {
   Briefcase,
   Mail,
   Star,
+  MessageSquareQuote,
+  Sparkles,
   CheckCircle,
   XCircle,
   PlusCircle,
@@ -59,7 +63,7 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'vendors' | 'accounts' | 'events' | 'gallery' | 'news' | 'jobs' | 'inquiries' | 'reviews' | 'legal' | 'email'
+    'overview' | 'vendors' | 'accounts' | 'events' | 'gallery' | 'news' | 'jobs' | 'inquiries' | 'reviews' | 'stories' | 'legal' | 'email'
   >('overview');
 
   // Data states
@@ -71,6 +75,23 @@ export default function AdminDashboard() {
   const [jobs, setJobs] = useState<JobListing[]>([]);
   const [inquiries, setInquiries] = useState<ContactSubmission[]>([]);
   const [reviews, setReviews] = useState<BusinessReview[]>([]);
+  const [stories, setStories] = useState<ImpactStory[]>([]);
+  const [storyFilter, setStoryFilter] = useState<'all' | 'pending' | 'approved' | 'featured'>('all');
+  const [storySearch, setStorySearch] = useState('');
+  const [showAddStoryModal, setShowAddStoryModal] = useState(false);
+  const [newStoryForm, setNewStoryForm] = useState({
+    title: '',
+    authorName: '',
+    businessName: '',
+    roleOrDesignation: '',
+    benefitCategory: 'B2B Sourcing',
+    story: '',
+    featured: true,
+    status: 'approved' as 'approved' | 'pending',
+    rating: 5,
+  });
+  const [editingStory, setEditingStory] = useState<ImpactStory | null>(null);
+  const [editStoryForm, setEditStoryForm] = useState<Partial<ImpactStory>>({});
   const [loading, setLoading] = useState(true);
 
   // Email & Notifications State
@@ -155,7 +176,7 @@ export default function AdminDashboard() {
 
   const loadAllData = async () => {
     setLoading(true);
-    const [vRes, evRes, nRes, jRes, inqRes, revRes, galRes, uList] = await Promise.all([
+    const [vRes, evRes, nRes, jRes, inqRes, revRes, galRes, uList, stRes] = await Promise.all([
       membersService.getMembers({ status: 'all' }),
       eventsService.getEvents(),
       newsService.getNews(),
@@ -164,6 +185,7 @@ export default function AdminDashboard() {
       membersService.getAllReviewsAdmin(),
       galleryService.getAlbums(),
       authService.getUsers(),
+      storiesService.getAllStoriesAdmin(),
     ]);
 
     setVendors(vRes.members);
@@ -174,6 +196,7 @@ export default function AdminDashboard() {
     setReviews(revRes);
     setAlbums(galRes);
     setUsersList(uList || []);
+    setStories(stRes || []);
     try {
       const lDoc = await legalService.getLegalContent(activeLegalDoc);
       setLegalDoc(lDoc);
@@ -526,6 +549,80 @@ export default function AdminDashboard() {
     }
   };
 
+  const handleStoryStatus = async (id: string, status: 'approved' | 'pending' | 'rejected') => {
+    await storiesService.updateStoryStatus(id, status);
+    loadAllData();
+  };
+
+  const handleToggleFeaturedStory = async (id: string, currentFeatured: boolean) => {
+    await storiesService.toggleFeatureStory(id, !currentFeatured);
+    loadAllData();
+  };
+
+  const handleDeleteStory = async (id: string) => {
+    if (confirm('Are you sure you want to permanently delete this impact story?')) {
+      await storiesService.deleteStory(id);
+      loadAllData();
+    }
+  };
+
+  const handleCreateAdminStory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!newStoryForm.authorName.trim() || !newStoryForm.businessName.trim() || !newStoryForm.story.trim()) {
+      alert('Please provide author name, business name, and story.');
+      return;
+    }
+    await storiesService.createStory({
+      title: newStoryForm.title.trim() || `Impact Story: ${newStoryForm.businessName.trim()}`,
+      authorName: newStoryForm.authorName.trim(),
+      businessName: newStoryForm.businessName.trim(),
+      roleOrDesignation: newStoryForm.roleOrDesignation.trim() || 'Business Owner',
+      benefitCategory: newStoryForm.benefitCategory,
+      story: newStoryForm.story.trim(),
+      rating: newStoryForm.rating,
+      featured: newStoryForm.featured,
+      status: newStoryForm.status,
+    });
+    setShowAddStoryModal(false);
+    setNewStoryForm({
+      title: '',
+      authorName: '',
+      businessName: '',
+      roleOrDesignation: '',
+      benefitCategory: 'B2B Sourcing',
+      story: '',
+      featured: true,
+      status: 'approved',
+      rating: 5,
+    });
+    loadAllData();
+  };
+
+  const handleStartEditStory = (story: ImpactStory) => {
+    setEditingStory(story);
+    setEditStoryForm({
+      title: story.title,
+      authorName: story.authorName,
+      businessName: story.businessName,
+      roleOrDesignation: story.roleOrDesignation || '',
+      benefitCategory: story.benefitCategory || 'B2B Sourcing',
+      story: story.story,
+      rating: story.rating || 5,
+      status: story.status,
+      featured: story.featured,
+      contactPhone: story.contactPhone || '',
+      contactEmail: story.contactEmail || '',
+    });
+  };
+
+  const handleSaveEditStory = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!editingStory) return;
+    await storiesService.updateStory(editingStory.$id || editingStory.id, editStoryForm);
+    setEditingStory(null);
+    loadAllData();
+  };
+
   const loadSmtpStatus = async () => {
     setSmtpLoading(true);
     try {
@@ -737,6 +834,7 @@ export default function AdminDashboard() {
             { id: 'jobs', label: `Jobs (${jobs.length})`, icon: Briefcase },
             { id: 'inquiries', label: `Inquiries (${inquiries.length})`, icon: Mail },
             { id: 'reviews', label: `Reviews (${reviews.length})`, icon: Star },
+            { id: 'stories', label: `Impact Stories (${stories.length})`, icon: MessageSquareQuote },
             { id: 'email', label: 'Email Alerts', icon: Send },
             { id: 'legal', label: 'Legal Policies', icon: FileText },
           ].map((tab) => {
@@ -764,12 +862,12 @@ export default function AdminDashboard() {
         {/* TAB 1: OVERVIEW METRICS */}
         {activeTab === 'overview' && (
           <div className="space-y-8">
-            <div className="grid grid-cols-2 lg:grid-cols-4 gap-5">
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+            <div className="grid grid-cols-2 lg:grid-cols-5 gap-4">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
                 <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block">
-                  Total Member Businesses
+                  Total Enterprises
                 </span>
-                <div className="font-serif-heading text-3xl font-extrabold text-[#07174a] mt-2">
+                <div className="font-serif-heading text-2xl font-extrabold text-[#07174a] mt-1.5">
                   {vendors.length}
                 </div>
                 <span className="text-[11px] text-emerald-700 font-semibold mt-1 block">
@@ -777,39 +875,51 @@ export default function AdminDashboard() {
                 </span>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
                 <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block">
                   Pending Approvals
                 </span>
-                <div className="font-serif-heading text-3xl font-extrabold text-amber-600 mt-2">
+                <div className="font-serif-heading text-2xl font-extrabold text-amber-600 mt-1.5">
                   {vendors.filter((v) => v.status === 'pending').length}
                 </div>
                 <span className="text-[11px] text-slate-500 mt-1 block">
-                  Awaiting secretariat verification
+                  Awaiting verification
                 </span>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
+                <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block">
+                  Impact Stories
+                </span>
+                <div className="font-serif-heading text-2xl font-extrabold text-amber-600 mt-1.5">
+                  {stories.length}
+                </div>
+                <span className="text-[11px] text-emerald-700 font-semibold mt-1 block">
+                  {stories.filter((s) => s.featured && s.status === 'approved').length} Featured on Main Page
+                </span>
+              </div>
+
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
                 <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block">
                   Chamber Events
                 </span>
-                <div className="font-serif-heading text-3xl font-extrabold text-[#1540a8] mt-2">
+                <div className="font-serif-heading text-2xl font-extrabold text-[#1540a8] mt-1.5">
                   {events.length}
                 </div>
                 <span className="text-[11px] text-slate-500 mt-1 block">
-                  Upcoming conclaves & meetings
+                  Conclaves & meetings
                 </span>
               </div>
 
-              <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-xs">
+              <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-xs">
                 <span className="text-[10px] uppercase tracking-wider font-bold text-slate-400 block">
                   Public Inquiries
                 </span>
-                <div className="font-serif-heading text-3xl font-extrabold text-purple-700 mt-2">
+                <div className="font-serif-heading text-2xl font-extrabold text-purple-700 mt-1.5">
                   {inquiries.length}
                 </div>
                 <span className="text-[11px] text-slate-500 mt-1 block">
-                  Delivered to secretariat inbox
+                  Secretariat inbox
                 </span>
               </div>
             </div>
@@ -1421,6 +1531,224 @@ export default function AdminDashboard() {
                 ))}
               </div>
             )}
+          </div>
+        )}
+
+        {/* TAB 8.5: MEMBER IMPACT STORIES */}
+        {activeTab === 'stories' && (
+          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-6">
+              <div>
+                <h2 className="font-serif-heading text-lg font-bold text-[#07174a] flex items-center gap-2">
+                  <MessageSquareQuote className="h-5 w-5 text-amber-500" />
+                  <span>Member &amp; Beneficiary Impact Stories</span>
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Review stories submitted by beneficiaries and choose which selected stories to feature on the homepage.
+                </p>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={loadAllData}
+                  className="flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  <span>Refresh</span>
+                </button>
+                <button
+                  onClick={() => setShowAddStoryModal(true)}
+                  className="flex items-center gap-1.5 rounded-lg bg-[#07174a] hover:bg-[#1540a8] px-3.5 py-1.5 text-xs font-bold text-white shadow-xs cursor-pointer"
+                >
+                  <PlusCircle className="h-3.5 w-3.5 text-amber-400" />
+                  <span>+ Add Story</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Filter Tabs & Search Bar */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 mb-6 pb-4 border-b border-slate-100">
+              <div className="flex items-center gap-1.5 overflow-x-auto text-xs">
+                {(['all', 'pending', 'approved', 'featured'] as const).map((filterKey) => {
+                  const count =
+                    filterKey === 'all'
+                      ? stories.length
+                      : filterKey === 'pending'
+                      ? stories.filter((s) => s.status === 'pending').length
+                      : filterKey === 'approved'
+                      ? stories.filter((s) => s.status === 'approved').length
+                      : stories.filter((s) => s.featured).length;
+
+                  return (
+                    <button
+                      key={filterKey}
+                      onClick={() => setStoryFilter(filterKey)}
+                      className={`px-3 py-1.5 rounded-lg font-bold capitalize transition-all cursor-pointer ${
+                        storyFilter === filterKey
+                          ? 'bg-[#07174a] text-white shadow-xs'
+                          : 'bg-slate-100 text-slate-600 hover:bg-slate-200'
+                      }`}
+                    >
+                      {filterKey === 'featured' ? 'Featured on Main Page' : filterKey} ({count})
+                    </button>
+                  );
+                })}
+              </div>
+
+              <div className="relative w-full sm:w-64">
+                <Search className="absolute left-3 top-2.5 h-3.5 w-3.5 text-slate-400" />
+                <input
+                  type="text"
+                  placeholder="Search by author or enterprise…"
+                  value={storySearch}
+                  onChange={(e) => setStorySearch(e.target.value)}
+                  className="w-full rounded-lg border border-slate-200 pl-8 pr-3 py-1.5 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-[#1540a8]"
+                />
+              </div>
+            </div>
+
+            {/* Filtered Stories List */}
+            {(() => {
+              const filtered = stories.filter((s) => {
+                if (storyFilter === 'pending' && s.status !== 'pending') return false;
+                if (storyFilter === 'approved' && s.status !== 'approved') return false;
+                if (storyFilter === 'featured' && !s.featured) return false;
+                if (storySearch.trim()) {
+                  const q = storySearch.toLowerCase();
+                  return (
+                    s.authorName.toLowerCase().includes(q) ||
+                    s.businessName.toLowerCase().includes(q) ||
+                    s.title.toLowerCase().includes(q) ||
+                    s.story.toLowerCase().includes(q)
+                  );
+                }
+                return true;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="text-center py-12 text-xs text-slate-400">
+                    No impact stories found matching the selected filter.
+                  </div>
+                );
+              }
+
+              return (
+                <div className="space-y-4">
+                  {filtered.map((story) => (
+                    <div
+                      key={story.$id || story.id}
+                      className="rounded-xl border border-slate-200 p-5 text-xs flex flex-col md:flex-row md:items-start justify-between gap-5 bg-white hover:border-slate-300 transition-all shadow-xs"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2 mb-2">
+                          <span className="font-bold text-slate-900 text-sm">{story.authorName}</span>
+                          <span className="text-slate-400">•</span>
+                          <span className="font-semibold text-slate-700">{story.businessName}</span>
+                          {story.roleOrDesignation && (
+                            <span className="text-slate-500">({story.roleOrDesignation})</span>
+                          )}
+                          <span className="px-2 py-0.5 rounded text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-800 border border-amber-200 ml-1">
+                            {story.benefitCategory || 'Community Impact'}
+                          </span>
+                          {story.createdAt && (
+                            <span className="text-slate-400 text-[11px] ml-auto">
+                              {new Date(story.createdAt).toLocaleDateString('en-IN', {
+                                day: 'numeric',
+                                month: 'short',
+                                year: 'numeric',
+                              })}
+                            </span>
+                          )}
+                        </div>
+
+                        <h4 className="font-serif-heading font-bold text-slate-800 text-sm mb-1.5">
+                          "{story.title}"
+                        </h4>
+                        <p className="text-slate-600 leading-relaxed bg-slate-50 p-3 rounded-lg border border-slate-100 italic">
+                          "{story.story}"
+                        </p>
+
+                        {(story.contactPhone || story.contactEmail) && (
+                          <div className="mt-2 text-[11px] text-slate-400 flex items-center gap-3">
+                            {story.contactPhone && <span>Phone: {story.contactPhone}</span>}
+                            {story.contactEmail && <span>Email: {story.contactEmail}</span>}
+                          </div>
+                        )}
+                      </div>
+
+                      <div className="flex flex-row md:flex-col items-end gap-2.5 shrink-0">
+                        {/* Status & Featured Badges */}
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
+                              story.status === 'approved'
+                                ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                : 'bg-amber-50 text-amber-700 border border-amber-200'
+                            }`}
+                          >
+                            {story.status}
+                          </span>
+                          {story.featured && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider bg-amber-400 text-[#07174a] shadow-xs">
+                              ★ Featured
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Feature on Main Page Toggle Button */}
+                        <button
+                          onClick={() => handleToggleFeaturedStory(story.$id || story.id, story.featured)}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold transition-all cursor-pointer shadow-xs ${
+                            story.featured
+                              ? 'bg-amber-100 text-amber-900 hover:bg-amber-200 border border-amber-300'
+                              : 'bg-slate-100 text-slate-700 hover:bg-slate-200 border border-slate-300'
+                          }`}
+                          title={story.featured ? 'Remove from Main Page showcase' : 'Feature this story on the Main Page'}
+                        >
+                          <Star className={`h-3.5 w-3.5 ${story.featured ? 'fill-amber-600 text-amber-600' : 'text-slate-400'}`} />
+                          <span>{story.featured ? 'Featured on Main Page' : 'Feature on Main Page'}</span>
+                        </button>
+
+                        {/* Approval Action Buttons */}
+                        <div className="flex items-center gap-2">
+                          {story.status !== 'approved' ? (
+                            <button
+                              onClick={() => handleStoryStatus(story.$id || story.id, 'approved')}
+                              className="rounded-lg bg-emerald-600 px-3 py-1.5 text-xs font-bold text-white hover:bg-emerald-700 cursor-pointer shadow-xs transition-colors"
+                            >
+                              ✓ Approve
+                            </button>
+                          ) : (
+                            <button
+                              onClick={() => handleStoryStatus(story.$id || story.id, 'pending')}
+                              className="rounded-lg bg-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-300 cursor-pointer transition-colors"
+                            >
+                              Unapprove
+                            </button>
+                          )}
+                          <button
+                            onClick={() => handleStartEditStory(story)}
+                            className="rounded-lg bg-blue-50 px-2.5 py-1.5 text-xs font-semibold text-blue-700 hover:bg-blue-100 cursor-pointer transition-colors inline-flex items-center gap-1"
+                            title="Edit story details"
+                          >
+                            <Edit3 className="h-3.5 w-3.5" />
+                            <span>Edit</span>
+                          </button>
+                          <button
+                            onClick={() => handleDeleteStory(story.$id || story.id)}
+                            className="rounded-lg bg-rose-50 px-2.5 py-1.5 text-xs font-semibold text-rose-700 hover:bg-rose-100 cursor-pointer transition-colors"
+                            title="Delete story"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              );
+            })()}
           </div>
         )}
 
@@ -2799,6 +3127,306 @@ export default function AdminDashboard() {
                     )}
                   </button>
                 </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* ADD IMPACT STORY MODAL */}
+      {showAddStoryModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="relative w-full max-w-lg rounded-2xl bg-white p-6 sm:p-8 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setShowAddStoryModal(false)}
+              className="absolute top-4 right-4 rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="mb-5">
+              <h3 className="font-serif-heading text-xl font-bold text-[#07174a] flex items-center gap-2">
+                <PlusCircle className="h-5 w-5 text-amber-500" />
+                <span>Add Member Impact Story</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Create a verified impact story to feature on the homepage.
+              </p>
+            </div>
+
+            <form onSubmit={handleCreateAdminStory} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Author Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Anand Agrawal"
+                    value={newStoryForm.authorName}
+                    onChange={(e) => setNewStoryForm({ ...newStoryForm, authorName: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Business Name *</label>
+                  <input
+                    type="text"
+                    required
+                    placeholder="e.g. Narmada Agro Tech"
+                    value={newStoryForm.businessName}
+                    onChange={(e) => setNewStoryForm({ ...newStoryForm, businessName: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Role / Designation</label>
+                  <input
+                    type="text"
+                    placeholder="e.g. Managing Partner"
+                    value={newStoryForm.roleOrDesignation}
+                    onChange={(e) => setNewStoryForm({ ...newStoryForm, roleOrDesignation: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Benefit Category</label>
+                  <select
+                    value={newStoryForm.benefitCategory}
+                    onChange={(e) => setNewStoryForm({ ...newStoryForm, benefitCategory: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:outline-none focus:border-[#1540a8] bg-white cursor-pointer"
+                  >
+                    <option value="B2B Sourcing">B2B Sourcing &amp; Vendors</option>
+                    <option value="Business Growth">Business Growth &amp; Orders</option>
+                    <option value="Talent &amp; Hiring">Talent &amp; Hiring</option>
+                    <option value="Networking">Networking &amp; Conclaves</option>
+                    <option value="Credibility">Trust &amp; Verification</option>
+                    <option value="Other">Other Community Benefit</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Story Title</label>
+                <input
+                  type="text"
+                  placeholder="e.g. Sourced key equipment via Chamber network in 3 days"
+                  value={newStoryForm.title}
+                  onChange={(e) => setNewStoryForm({ ...newStoryForm, title: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Impact Story Experience *</label>
+                <textarea
+                  required
+                  rows={4}
+                  placeholder="Details of the benefit, growth, or solution achieved through ACCI..."
+                  value={newStoryForm.story}
+                  onChange={(e) => setNewStoryForm({ ...newStoryForm, story: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 p-3 text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                />
+              </div>
+
+              <div className="flex items-center gap-6 pt-1">
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newStoryForm.featured}
+                    onChange={(e) => setNewStoryForm({ ...newStoryForm, featured: e.target.checked })}
+                    className="h-4 w-4 rounded border-slate-300 text-[#07174a]"
+                  />
+                  <span className="font-semibold text-slate-700">Feature on Main Page</span>
+                </label>
+
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={newStoryForm.status === 'approved'}
+                    onChange={(e) => setNewStoryForm({ ...newStoryForm, status: e.target.checked ? 'approved' : 'pending' })}
+                    className="h-4 w-4 rounded border-slate-300 text-[#07174a]"
+                  />
+                  <span className="font-semibold text-slate-700">Directly Mark as Approved</span>
+                </label>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setShowAddStoryModal(false)}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-slate-700 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-[#07174a] hover:bg-[#1540a8] px-5 py-2 font-bold text-white shadow cursor-pointer"
+                >
+                  Save Impact Story
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT IMPACT STORY MODAL */}
+      {editingStory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="relative w-full max-w-lg rounded-2xl bg-white p-6 sm:p-8 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+            <button
+              onClick={() => setEditingStory(null)}
+              className="absolute top-4 right-4 rounded-full p-1.5 text-slate-400 hover:bg-slate-100 hover:text-slate-700 transition-colors cursor-pointer"
+            >
+              <X className="h-5 w-5" />
+            </button>
+
+            <div className="mb-5">
+              <h3 className="font-serif-heading text-xl font-bold text-[#07174a] flex items-center gap-2">
+                <Edit3 className="h-5 w-5 text-blue-600" />
+                <span>Edit Member Impact Story</span>
+              </h3>
+              <p className="text-xs text-slate-500 mt-0.5">
+                Update story content, approval status, and Main Page featuring option.
+              </p>
+            </div>
+
+            <form onSubmit={handleSaveEditStory} className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Author Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editStoryForm.authorName || ''}
+                    onChange={(e) => setEditStoryForm({ ...editStoryForm, authorName: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Business Name *</label>
+                  <input
+                    type="text"
+                    required
+                    value={editStoryForm.businessName || ''}
+                    onChange={(e) => setEditStoryForm({ ...editStoryForm, businessName: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Role / Designation</label>
+                  <input
+                    type="text"
+                    value={editStoryForm.roleOrDesignation || ''}
+                    onChange={(e) => setEditStoryForm({ ...editStoryForm, roleOrDesignation: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Benefit Category</label>
+                  <select
+                    value={editStoryForm.benefitCategory || 'B2B Sourcing'}
+                    onChange={(e) => setEditStoryForm({ ...editStoryForm, benefitCategory: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:outline-none focus:border-[#1540a8] bg-white cursor-pointer"
+                  >
+                    <option value="B2B Sourcing">B2B Sourcing &amp; Vendors</option>
+                    <option value="Business Growth">Business Growth &amp; Orders</option>
+                    <option value="Talent &amp; Hiring">Talent &amp; Hiring</option>
+                    <option value="Networking">Networking &amp; Conclaves</option>
+                    <option value="Credibility">Trust &amp; Verification</option>
+                    <option value="Other">Other Community Benefit</option>
+                  </select>
+                </div>
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Story Title</label>
+                <input
+                  type="text"
+                  value={editStoryForm.title || ''}
+                  onChange={(e) => setEditStoryForm({ ...editStoryForm, title: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                />
+              </div>
+
+              <div>
+                <label className="block font-semibold text-slate-700 mb-1">Impact Story Experience *</label>
+                <textarea
+                  required
+                  rows={4}
+                  value={editStoryForm.story || ''}
+                  onChange={(e) => setEditStoryForm({ ...editStoryForm, story: e.target.value })}
+                  className="w-full rounded-lg border border-slate-300 p-3 text-slate-800 focus:outline-none focus:border-[#1540a8] leading-relaxed"
+                />
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Moderation Status</label>
+                  <select
+                    value={editStoryForm.status || 'pending'}
+                    onChange={(e) => setEditStoryForm({ ...editStoryForm, status: e.target.value as any })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:outline-none focus:border-[#1540a8] bg-white cursor-pointer"
+                  >
+                    <option value="approved">Approved</option>
+                    <option value="pending">Pending Review</option>
+                    <option value="rejected">Rejected</option>
+                  </select>
+                </div>
+                <div className="flex items-center pt-5">
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={Boolean(editStoryForm.featured)}
+                      onChange={(e) => setEditStoryForm({ ...editStoryForm, featured: e.target.checked })}
+                      className="h-4 w-4 rounded border-slate-300 text-[#07174a]"
+                    />
+                    <span className="font-semibold text-slate-700">Feature on Main Page</span>
+                  </label>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Contact Phone</label>
+                  <input
+                    type="tel"
+                    value={editStoryForm.contactPhone || ''}
+                    onChange={(e) => setEditStoryForm({ ...editStoryForm, contactPhone: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                  />
+                </div>
+                <div>
+                  <label className="block font-semibold text-slate-700 mb-1">Contact Email</label>
+                  <input
+                    type="email"
+                    value={editStoryForm.contactEmail || ''}
+                    onChange={(e) => setEditStoryForm({ ...editStoryForm, contactEmail: e.target.value })}
+                    className="w-full rounded-lg border border-slate-300 px-3 py-2 text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-3 border-t border-slate-200 flex items-center justify-end gap-3">
+                <button
+                  type="button"
+                  onClick={() => setEditingStory(null)}
+                  className="rounded-lg border border-slate-300 px-4 py-2 text-slate-700 hover:bg-slate-50 cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="rounded-lg bg-[#07174a] hover:bg-[#1540a8] px-5 py-2 font-bold text-white shadow cursor-pointer"
+                >
+                  Save Changes
+                </button>
               </div>
             </form>
           </div>

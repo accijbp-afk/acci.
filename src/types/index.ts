@@ -128,11 +128,17 @@ export interface ImpactStory {
   id: string;
   title: string;
   authorName: string;
+  roleOrDesignation?: string;
   businessName: string;
   story: string;
+  benefitCategory?: string;
   imageUrl?: string;
-  status: 'approved' | 'pending';
+  rating?: number;
+  featured: boolean;
+  status: 'approved' | 'pending' | 'rejected';
   createdAt: string;
+  contactEmail?: string;
+  contactPhone?: string;
 }
 
 export interface CommitteeLeader {

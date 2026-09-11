@@ -49,46 +49,6 @@ export const Header: React.FC = () => {
 
   return (
     <header className="sticky top-0 z-50 bg-[#07174a] text-white shadow-xl">
-      {/* Top Institutional Bar */}
-      <div className="border-b border-white/10 bg-[#040e30] px-4 py-1.5 text-xs text-slate-300">
-        <div className="mx-auto flex max-w-7xl items-center justify-between">
-          <div className="flex items-center gap-4">
-            <span className="hidden sm:inline-block font-medium tracking-wide text-amber-300/90">
-              🏛️ {t('Agrawal Chamber of Commerce & Industries')} • {t('Jabalpur (M.P.)')}
-            </span>
-            <div className="flex items-center gap-3">
-              <a
-                href="tel:+918319565363"
-                className="flex items-center gap-1.5 hover:text-amber-300 transition-colors"
-              >
-                <Phone className="h-3 w-3 text-amber-400" />
-                <span>+91 8319565363</span>
-              </a>
-              <span className="hidden text-slate-500 md:inline">|</span>
-              <a
-                href="mailto:accijbp@gmail.com"
-                className="hidden md:flex items-center gap-1.5 hover:text-amber-300 transition-colors"
-              >
-                <Mail className="h-3 w-3 text-amber-400" />
-                <span>accijbp@gmail.com</span>
-              </a>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-3">
-            {currentUser && currentUser.role === 'admin' && (
-              <Link
-                href="/admin"
-                className="flex items-center gap-1 rounded bg-red-600/80 px-2 py-0.5 text-[11px] font-medium text-white hover:bg-red-600"
-              >
-                <ShieldCheck className="h-3 w-3" />
-                {t('Admin Panel')}
-              </Link>
-            )}
-          </div>
-        </div>
-      </div>
-
       {/* Main Navigation */}
       <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-3 sm:px-6">
         {/* Brand Crest & Title */}
@@ -104,9 +64,6 @@ export const Header: React.FC = () => {
           <div>
             <div className="font-serif-heading text-base sm:text-lg font-bold tracking-tight text-white flex items-center gap-2 leading-tight">
               <span>{t('Agrawal Chambers of Commerce and Industries')}</span>
-            </div>
-            <div className="text-[10px] tracking-wider text-amber-300 font-semibold uppercase">
-              {t('Empowering Agrawal Enterprise')}
             </div>
           </div>
         </Link>
@@ -150,20 +107,17 @@ export const Header: React.FC = () => {
             </span>
           </a>
 
-          {/* Bilingual Toggle */}
-          <button
-            onClick={toggleLang}
-            className="notranslate flex items-center rounded-full border border-white/25 bg-white/5 px-2.5 py-1 text-xs font-semibold tracking-wider text-amber-300 hover:bg-white/10 transition-all cursor-pointer shrink-0"
-            title="Toggle English / हिन्दी"
-            translate="no"
-          >
-            <span className={lang === 'en' ? 'text-white font-bold underline' : 'opacity-70'}>EN</span>
-            <span className="mx-1 opacity-40">/</span>
-            <span className={lang === 'hi' ? 'text-white font-bold underline' : 'opacity-70'}>हिन्दी</span>
-          </button>
-
           {currentUser ? (
             <div className="flex items-center gap-2">
+              {currentUser.role === 'admin' && (
+                <Link
+                  href="/admin"
+                  className="flex items-center gap-1 rounded bg-red-600/80 px-2.5 py-1 text-xs font-medium text-white hover:bg-red-600 shadow-sm"
+                >
+                  <ShieldCheck className="h-3.5 w-3.5" />
+                  <span>{t('Admin Panel')}</span>
+                </Link>
+              )}
               <Link
                 href="/dashboard"
                 className="flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1 text-xs font-medium text-white hover:bg-white/15 transition-all"
@@ -277,7 +231,7 @@ export const Header: React.FC = () => {
                 {t('btn_join', 'Become a Member')}
               </Link>
 
-              {/* Mobile Lawgical Startup Badge & Language Switch */}
+              {/* Mobile Lawgical Startup Badge */}
               <div className="flex items-center justify-between gap-2 pt-3 border-t border-white/10">
                 <a
                   href="https://lawgicalstartup.com/"
@@ -293,16 +247,6 @@ export const Header: React.FC = () => {
                     Lawgical Startup
                   </span>
                 </a>
-
-                <button
-                  onClick={toggleLang}
-                  className="notranslate flex items-center rounded-full border border-white/25 bg-white/5 px-3 py-1.5 text-xs font-semibold tracking-wider text-amber-300"
-                  translate="no"
-                >
-                  <span className={lang === 'en' ? 'text-white font-bold underline' : 'opacity-70'}>EN</span>
-                  <span className="mx-1 opacity-40">/</span>
-                  <span className={lang === 'hi' ? 'text-white font-bold underline' : 'opacity-70'}>हिन्दी</span>
-                </button>
               </div>
             </div>
           </nav>

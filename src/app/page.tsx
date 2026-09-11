@@ -12,6 +12,7 @@ import { galleryService } from '@/services/appwrite/gallery';
 import { SEED_CATEGORIES, SEED_INDUSTRIES, SEED_GALLERY } from '@/services/seedData';
 import { MemberBusiness, JobListing, ChamberNews, GalleryAlbum } from '@/types';
 import { getBusinessBanner } from '@/utils/businessImage';
+import ImpactStoriesSection from '@/components/home/ImpactStoriesSection';
 import {
   Search,
   CheckCircle2,
@@ -84,17 +85,9 @@ export default function HomePage() {
         <div className="absolute inset-0 opacity-10 bg-[radial-gradient(#d4af37_1px,transparent_1px)] [background-size:24px_24px] pointer-events-none" />
 
         <div className="relative mx-auto max-w-4xl px-4 sm:px-6 flex flex-col items-center text-center">
-          {/* Heraldic Affiliation Seal Eyebrow */}
-          <div className="inline-flex items-center gap-2.5 rounded-full border border-amber-400/40 bg-amber-400/10 px-4 py-1.5 text-xs font-semibold tracking-wider text-amber-300 uppercase backdrop-blur-sm mb-6 shadow-sm">
-            <div className="relative h-5 w-5 rounded-md overflow-hidden shrink-0 border border-amber-400 bg-white p-0.5">
-              <Image
-                src="/images/acci_logo.jpg"
-                alt="ACCI Logo"
-                fill
-                className="object-contain"
-              />
-            </div>
-            <span>Apex Agrawal Trade Body • Jabalpur</span>
+          {/* Heraldic Affiliation Eyebrow */}
+          <div className="inline-flex items-center gap-2.5 rounded-full border border-amber-400/40 bg-amber-400/10 px-4 py-1.5 text-xs font-bold tracking-wider text-amber-300 uppercase backdrop-blur-sm mb-6 shadow-sm">
+            <span>CONNECTING AGRAWAL BUSINESSES • JABALPUR</span>
           </div>
 
           {/* Dignified Corporate Headline */}
@@ -187,10 +180,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10">
             <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-[#1540a8]">
-                Directory Scope
-              </span>
-              <h2 className="font-serif-heading text-2xl sm:text-3xl font-bold text-[#07174a] mt-1">
+              <h2 className="font-serif-heading text-2xl sm:text-3xl font-bold text-[#07174a]">
                 Explore by Category &amp; Industry
               </h2>
               <p className="text-xs sm:text-sm text-slate-600 mt-1">
@@ -274,11 +264,8 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10">
             <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-amber-800">
-                Institutional Directory
-              </span>
-              <h2 className="font-serif-heading text-2xl sm:text-3xl font-bold text-[#07174a] mt-1">
-                Featured Member Enterprises
+              <h2 className="font-serif-heading text-2xl sm:text-3xl font-bold text-[#07174a]">
+                Leading Businesses in Our Network
               </h2>
               <p className="text-xs sm:text-sm text-slate-600 mt-1">
                 Verified commercial establishments, manufacturers, and consulting firms operating across Central India.
@@ -429,10 +416,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10">
             <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-amber-400">
-                Photo Gallery
-              </span>
-              <h2 className="font-serif-heading text-2xl sm:text-3xl font-bold text-white mt-1">
+              <h2 className="font-serif-heading text-2xl sm:text-3xl font-bold text-white">
                 Concluded Events &amp; Moments
               </h2>
               <p className="text-xs sm:text-sm text-slate-300 mt-1">
@@ -519,10 +503,7 @@ export default function HomePage() {
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <div className="flex flex-col sm:flex-row sm:items-end justify-between mb-10">
             <div>
-              <span className="text-xs font-bold uppercase tracking-widest text-amber-800">
-                Talent & Careers
-              </span>
-              <h2 className="font-serif-heading text-2xl sm:text-3xl font-bold text-[#07174a] mt-1">
+              <h2 className="font-serif-heading text-2xl sm:text-3xl font-bold text-[#07174a]">
                 Community Career Board
               </h2>
               <p className="text-xs sm:text-sm text-slate-600 mt-1">
@@ -619,6 +600,9 @@ export default function HomePage() {
         </div>
       </section>
 
+      {/* ── 8.5 COMMUNITY IMPACT STORIES ──────────────────────────── */}
+      <ImpactStoriesSection />
+
       {/* ── 9. THREE-STEP ENTERPRISE ENROLMENT ───────────────────────── */}
       <section className="py-16 bg-gradient-to-br from-[#07174a] via-[#0b2168] to-[#040e30] text-white">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 text-center">
@@ -650,10 +634,10 @@ export default function HomePage() {
                 02
               </div>
               <h3 className="font-serif-heading text-base font-bold text-white">
-                Secretariat Verification
+                Verification Process
               </h3>
               <p className="mt-2 text-xs text-slate-300 leading-relaxed">
-                The ACCI Secretariat verifies enterprise details and issues your official Chamber Membership Number.
+                The ACCI Team validates the information submitted by members and, upon successful verification, issues the identification number.
               </p>
             </div>
 

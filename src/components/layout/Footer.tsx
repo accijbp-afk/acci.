@@ -54,9 +54,6 @@ export const Footer: React.FC = () => {
                 <span className="font-serif-heading font-bold text-base sm:text-lg text-white block">
                   {t('Agrawal Chambers of Commerce and Industries')}
                 </span>
-                <span className="text-xs text-amber-300/80 tracking-wider uppercase font-medium">
-                  {t('Empowering Agrawal Enterprise')}
-                </span>
               </div>
             </div>
 
@@ -162,11 +159,6 @@ export const Footer: React.FC = () => {
               <li>
                 <Link href="/dashboard" className="hover:text-amber-300 transition-colors">
                   {t('Listing Management')}
-                </Link>
-              </li>
-              <li>
-                <Link href="/admin" className="hover:text-amber-300 transition-colors">
-                  {t('Chamber Admin Access')}
                 </Link>
               </li>
               <li>

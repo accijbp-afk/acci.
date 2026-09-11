@@ -35,6 +35,11 @@ const MASTER_DICTIONARY: Record<string, string> = {
   'ACCI Jabalpur': 'एसीसीआई जबलपुर',
   'Empowering Agrawal Enterprise': 'अग्रवाल उद्यम सशक्तिकरण',
   'Apex Agrawal Trade Body • Jabalpur': 'शीर्ष अग्रवाल व्यापार परिसंघ • जबलपुर',
+  'CONNECTING AGRAWAL BUSINESSES • JABALPUR': 'अग्रवाल व्यवसायों को जोड़ना • जबलपुर',
+  'Leading Businesses in Our Network': 'हमारे नेटवर्क के प्रमुख व्यवसाय',
+  'Verification Process': 'सत्यापन प्रक्रिया',
+  'Community Impact Stories': 'सामुदायिक प्रभाव गाथाएँ',
+  'Share Your Impact Story': 'अपनी अनुभव गाथा साझा करें',
 
   // Navigation Links & Buttons
   'nav_home': 'मुख्य पृष्ठ',
@@ -776,125 +781,10 @@ export const LanguageProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     return translateText(fallback || keyOrPhrase);
   };
 
-  // DOM Walkers for complete site translation
+  // Default English translation (no intrusive DOM mutation to prevent React glitching)
   useEffect(() => {
-    if (typeof window === 'undefined') return;
-
-    const translateDOMNode = (node: Node) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        const parent = node.parentElement;
-        if (!parent) return;
-        const tag = parent.tagName.toUpperCase();
-        if (['SCRIPT', 'STYLE', 'NOSCRIPT', 'CODE', 'PRE'].includes(tag)) return;
-        if (parent.closest('.notranslate, [translate="no"]')) return;
-
-        const current = node.textContent || '';
-        if (!current.trim()) return;
-
-        if (!origTextNodes.current.has(node)) {
-          origTextNodes.current.set(node, current);
-        }
-
-        const orig = origTextNodes.current.get(node) || current;
-        const translated = translateText(orig);
-        if (translated !== node.textContent) {
-          node.textContent = translated;
-        }
-      } else if (node.nodeType === Node.ELEMENT_NODE) {
-        const el = node as HTMLElement;
-        if (el.closest && el.closest('.notranslate, [translate="no"]')) return;
-
-        // Placeholders in input and textarea
-        if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
-          if (el.placeholder) {
-            if (!origPlaceholders.current.has(el)) {
-              origPlaceholders.current.set(el, el.placeholder);
-            }
-            const orig = origPlaceholders.current.get(el) || el.placeholder;
-            const translated = translateText(orig);
-            if (translated !== el.placeholder) {
-              el.placeholder = translated;
-            }
-          }
-        }
-
-        // Title attributes
-        if (el.title) {
-          if (!origTitles.current.has(el)) {
-            origTitles.current.set(el, el.title);
-          }
-          const orig = origTitles.current.get(el) || el.title;
-          const translated = translateText(orig);
-          if (translated !== el.title) {
-            el.title = translated;
-          }
-        }
-
-        // Traverse child nodes
-        for (let i = 0; i < el.childNodes.length; i++) {
-          translateDOMNode(el.childNodes[i]);
-        }
-      }
-    };
-
-    const restoreDOMNode = (node: Node) => {
-      if (node.nodeType === Node.TEXT_NODE) {
-        if (origTextNodes.current.has(node)) {
-          const orig = origTextNodes.current.get(node)!;
-          if (orig !== node.textContent) {
-            node.textContent = orig;
-          }
-        }
-      } else if (node.nodeType === Node.ELEMENT_NODE) {
-        const el = node as HTMLElement;
-        if (el instanceof HTMLInputElement || el instanceof HTMLTextAreaElement) {
-          if (origPlaceholders.current.has(el)) {
-            el.placeholder = origPlaceholders.current.get(el)!;
-          }
-        }
-        if (origTitles.current.has(el)) {
-          el.title = origTitles.current.get(el)!;
-        }
-        for (let i = 0; i < el.childNodes.length; i++) {
-          restoreDOMNode(el.childNodes[i]);
-        }
-      }
-    };
-
-    // Apply or restore translation
-    if (lang === 'hi') {
-      isTranslating.current = true;
-      translateDOMNode(document.body);
-      isTranslating.current = false;
-
-      // Mutation observer to handle dynamic updates (drawers, modals, search results, tabs)
-      const observer = new MutationObserver((mutations) => {
-        if (isTranslating.current) return;
-        isTranslating.current = true;
-        for (const mut of mutations) {
-          if (mut.type === 'childList') {
-            mut.addedNodes.forEach((n) => translateDOMNode(n));
-          } else if (mut.type === 'characterData') {
-            if (mut.target) translateDOMNode(mut.target);
-          }
-        }
-        isTranslating.current = false;
-      });
-
-      observer.observe(document.body, {
-        childList: true,
-        subtree: true,
-        characterData: true,
-      });
-
-      return () => {
-        observer.disconnect();
-      };
-    } else {
-      // English mode: restore original texts
-      restoreDOMNode(document.body);
-    }
-  }, [lang, pathname]);
+    document.documentElement.lang = lang;
+  }, [lang]);
 
   return (
     <LanguageContext.Provider value={{ lang, toggleLang, setLang, t }}>
