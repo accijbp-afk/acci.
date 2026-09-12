@@ -47,6 +47,50 @@ const getLocalReviews = (): BusinessReview[] => {
   }
 };
 
+export const enrichMember = (
+  m: MemberBusiness,
+  localMembers: MemberBusiness[] = getLocalMembers(),
+  allReviews: BusinessReview[] = getLocalReviews()
+): MemberBusiness => {
+  // 1. Resolve custom banner
+  let bannerUrl = m.bannerUrl || '';
+  if (!bannerUrl) {
+    const localMatch = localMembers.find(
+      (loc) => loc.id === m.id || loc.$id === m.id || (loc.businessName && loc.businessName.toLowerCase() === m.businessName.toLowerCase())
+    );
+    if (localMatch?.bannerUrl) {
+      bannerUrl = localMatch.bannerUrl;
+    } else if (typeof window !== 'undefined') {
+      const cached =
+        localStorage.getItem(`acci_banner_${m.id}`) ||
+        (m.$id ? localStorage.getItem(`acci_banner_${m.$id}`) : null) ||
+        (m.businessName ? localStorage.getItem(`acci_banner_name_${encodeURIComponent(m.businessName.trim().toLowerCase())}`) : null);
+      if (cached) bannerUrl = cached;
+    }
+  }
+
+  // 2. Genuine Ratings: only count approved reviews
+  const approved = allReviews.filter(
+    (r) =>
+      r.status === 'approved' &&
+      (r.vendorId === m.id || (m.$id && r.vendorId === m.$id) || (r.businessName && m.businessName && r.businessName.toLowerCase().trim() === m.businessName.toLowerCase().trim()))
+  );
+
+  let rating = 0;
+  let reviewCount = approved.length;
+  if (reviewCount > 0) {
+    const sum = approved.reduce((acc, r) => acc + (Number(r.rating) || 0), 0);
+    rating = Math.round((sum / reviewCount) * 10) / 10;
+  }
+
+  return {
+    ...m,
+    bannerUrl: bannerUrl || m.bannerUrl,
+    rating,
+    reviewCount,
+  };
+};
+
 const ALLOWED_MEMBER_KEYS = new Set([
   'id',
   'userId',
@@ -184,7 +228,7 @@ export const membersService = {
           );
         }
 
-        return { members: docs, total: Math.max(docs.length, res.total) };
+        return { members: docs.map((d) => enrichMember(d, local)), total: Math.max(docs.length, res.total) };
       } catch (err) {
         console.warn('Appwrite fetch members error, using local fallback', err);
       }
@@ -222,7 +266,7 @@ export const membersService = {
     const limit = params?.limit || 50;
     const paginated = list.slice(offset, offset + limit);
 
-    return { members: paginated, total };
+    return { members: paginated.map((d) => enrichMember(d, list)), total };
   },
 
   async getMemberById(id: string): Promise<MemberBusiness | null> {
@@ -233,13 +277,14 @@ export const membersService = {
           APPWRITE_CONFIG.collections.members,
           id
         );
-        return doc as unknown as MemberBusiness;
+        return enrichMember(doc as unknown as MemberBusiness);
       } catch {
         // Fall back to local
       }
     }
     const members = getLocalMembers();
-    return members.find((m) => m.id === id || m.$id === id) || null;
+    const found = members.find((m) => m.id === id || m.$id === id);
+    return found ? enrichMember(found) : null;
   },
 
   async createMember(data: Omit<MemberBusiness, 'id' | 'status' | 'joinedAt'>): Promise<MemberBusiness> {
@@ -396,19 +441,30 @@ export const membersService = {
 
     const local = getLocalMembers();
     const idx = local.findIndex((m) => m.id === id || m.$id === id);
+    let updatedObj: MemberBusiness;
     if (idx !== -1) {
       local[idx] = { ...local[idx], ...updates };
-      saveLocalMembers(local);
-      if (typeof window !== 'undefined' && updates.bannerUrl !== undefined) {
+      updatedObj = local[idx];
+    } else {
+      updatedObj = { ...(updates as MemberBusiness), id };
+      local.unshift(updatedObj);
+    }
+    saveLocalMembers(local);
+
+    if (typeof window !== 'undefined' && updates.bannerUrl !== undefined) {
+      const keys = [id, updatedObj.id, updatedObj.$id].filter(Boolean) as string[];
+      if (updatedObj.businessName) {
+        keys.push(`name_${encodeURIComponent(updatedObj.businessName.trim().toLowerCase())}`);
+      }
+      for (const k of keys) {
         if (updates.bannerUrl) {
-          localStorage.setItem(`acci_banner_${local[idx].id}`, updates.bannerUrl);
+          localStorage.setItem(`acci_banner_${k}`, updates.bannerUrl);
         } else {
-          localStorage.removeItem(`acci_banner_${local[idx].id}`);
+          localStorage.removeItem(`acci_banner_${k}`);
         }
       }
-      return local[idx];
     }
-    return null;
+    return enrichMember(updatedObj, local);
   },
 
   async getReviews(vendorId: string, alternateId?: string): Promise<BusinessReview[]> {

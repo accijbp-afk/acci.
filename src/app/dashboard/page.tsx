@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
@@ -47,6 +47,7 @@ export default function MemberDashboard() {
   const [savingBanner, setSavingBanner] = useState(false);
   const [bannerSuccess, setBannerSuccess] = useState(false);
   const [bannerError, setBannerError] = useState<string | null>(null);
+  const bannerFileInputRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     authService.getCurrentUser().then((currentUser) => {
@@ -75,79 +76,16 @@ export default function MemberDashboard() {
     });
   }, [router]);
 
-  const handleBannerFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-
-    // Keep reference to file for storage upload
-    setSelectedBannerFile(file);
-
-    // Strict minimum file size limit: 500 KB (500 * 1024 bytes)
-    const MAX_SIZE_BYTES = 500 * 1024;
-    if (file.size > MAX_SIZE_BYTES) {
-      setBannerError(
-        `File size (${(file.size / 1024).toFixed(0)} KB) exceeds the maximum allowed size of 500 KB. Image dimensions should be 1200 × 500 px. Please compress or resize your image.`
-      );
-      setBannerPreview(null);
-      setSelectedBannerFile(null);
-      e.target.value = '';
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      const result = reader.result as string;
-      const img = new window.Image();
-      img.onload = () => {
-        const width = img.naturalWidth;
-        const height = img.naturalHeight;
-
-        // Verify orientation (landscape only)
-        if (height > width) {
-          setBannerError(
-            `Portrait image (${width} × ${height} px) is not allowed. The banner image must be horizontal/landscape with required dimensions of 1200 × 500 px.`
-          );
-          setBannerPreview(null);
-          setSelectedBannerFile(null);
-          return;
-        }
-
-        // Verify minimum resolution
-        if (width < 600 || height < 250) {
-          setBannerError(
-            `Image resolution (${width} × ${height} px) is too small. Required dimensions: 1200 × 500 px (minimum 600 × 250 px, landscape).`
-          );
-          setBannerPreview(null);
-          setSelectedBannerFile(null);
-          return;
-        }
-
-        // Valid image
-        setBannerError(null);
-        setBannerPreview(result);
-        setBannerInputUrl(result);
-      };
-
-      img.onerror = () => {
-        setBannerError('Unable to read the image file. Please upload a standard JPG, PNG, or WebP photo.');
-        setBannerPreview(null);
-        setSelectedBannerFile(null);
-      };
-
-      img.src = result;
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const handleSaveBanner = async () => {
+  const handleSaveBanner = async (directUrl?: string, directFile?: File) => {
     if (!myBusiness) return;
     setSavingBanner(true);
-    let targetUrl = bannerInputUrl.trim() || bannerPreview || '';
+    let targetUrl = directUrl || bannerInputUrl.trim() || bannerPreview || '';
+    const fileToUpload = directFile || selectedBannerFile;
 
     // If a local file was selected, upload via storageService for a clean permanent URL
-    if (selectedBannerFile) {
+    if (fileToUpload) {
       try {
-        const uploadedUrl = await storageService.uploadFile(selectedBannerFile);
+        const uploadedUrl = await storageService.uploadFile(fileToUpload);
         if (uploadedUrl) {
           targetUrl = uploadedUrl;
         }
@@ -168,16 +106,22 @@ export default function MemberDashboard() {
 
     if (typeof window !== 'undefined') {
       localStorage.setItem(`acci_banner_${myBusiness.id}`, targetUrl);
+      if (myBusiness.$id) {
+        localStorage.setItem(`acci_banner_${myBusiness.$id}`, targetUrl);
+      }
+      if (myBusiness.businessName) {
+        localStorage.setItem(`acci_banner_name_${encodeURIComponent(myBusiness.businessName.trim().toLowerCase())}`, targetUrl);
+      }
     }
 
     if (updated) {
       setMyBusiness({ ...updated, bannerUrl: targetUrl, workPhotos: [targetUrl] });
       setBannerSuccess(true);
-      setBannerPreview(null);
+      setBannerPreview(targetUrl);
       setSelectedBannerFile(null);
-      setTimeout(() => setBannerSuccess(false), 3500);
+      setTimeout(() => setBannerSuccess(false), 4000);
 
-      // Trigger email to registered member's email (Requirement 5)
+      // Trigger email to registered member's email
       if (user?.email) {
         notificationService.notifyMember(user.email, {
           event: 'PROFILE_UPDATED',
@@ -195,6 +139,77 @@ export default function MemberDashboard() {
       }
     }
     setSavingBanner(false);
+  };
+
+  const handleBannerFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    setBannerError(null);
+    const reader = new FileReader();
+    reader.onload = () => {
+      const result = reader.result as string;
+      const img = new window.Image();
+      img.onload = async () => {
+        try {
+          // Crop and resize to 1200x500 landscape canvas
+          const targetW = 1200;
+          const targetH = 500;
+          const canvas = document.createElement('canvas');
+          canvas.width = targetW;
+          canvas.height = targetH;
+          const ctx = canvas.getContext('2d');
+
+          if (ctx) {
+            const targetAspect = targetW / targetH;
+            const imgAspect = img.naturalWidth / img.naturalHeight;
+            let sx = 0, sy = 0, sWidth = img.naturalWidth, sHeight = img.naturalHeight;
+
+            if (imgAspect > targetAspect) {
+              sWidth = img.naturalHeight * targetAspect;
+              sx = (img.naturalWidth - sWidth) / 2;
+            } else {
+              sHeight = img.naturalWidth / targetAspect;
+              sy = (img.naturalHeight - sHeight) / 2;
+            }
+
+            ctx.drawImage(img, sx, sy, sWidth, sHeight, 0, 0, targetW, targetH);
+            const optimizedDataUrl = canvas.toDataURL('image/jpeg', 0.88);
+
+            setBannerPreview(optimizedDataUrl);
+            setBannerInputUrl(optimizedDataUrl);
+
+            canvas.toBlob(async (blob) => {
+              let uploadFile = file;
+              if (blob) {
+                uploadFile = new File([blob], file.name.replace(/\.[^/.]+$/, '.jpg'), { type: 'image/jpeg' });
+              }
+              setSelectedBannerFile(uploadFile);
+              // Auto-save immediately so clicking/uploading on image changes banner live
+              await handleSaveBanner(optimizedDataUrl, uploadFile);
+            }, 'image/jpeg', 0.88);
+          } else {
+            // Fallback if canvas 2D not available
+            setBannerPreview(result);
+            setSelectedBannerFile(file);
+            await handleSaveBanner(result, file);
+          }
+        } catch (cropErr) {
+          console.warn('Canvas optimization notice, using raw file:', cropErr);
+          setBannerPreview(result);
+          setSelectedBannerFile(file);
+          await handleSaveBanner(result, file);
+        }
+      };
+
+      img.onerror = () => {
+        setBannerError('Unable to process the image file. Please choose a valid JPG, PNG, or WebP photo.');
+        setBannerPreview(null);
+      };
+
+      img.src = result;
+    };
+    reader.readAsDataURL(file);
   };
 
   const handleResetToFallback = async () => {
@@ -496,38 +511,89 @@ export default function MemberDashboard() {
                     </div>
                   </div>
 
-                  {/* Banner Live Preview */}
-                  <div className="relative h-44 sm:h-52 w-full rounded-xl overflow-hidden border border-stone-300 bg-stone-900 mb-4 shadow-inner">
+                  {/* Banner Live Preview & Direct Click-on-Image Upload */}
+                  <div
+                    onClick={() => bannerFileInputRef.current?.click()}
+                    role="button"
+                    tabIndex={0}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault();
+                        bannerFileInputRef.current?.click();
+                      }
+                    }}
+                    title="Click on image to upload custom enterprise banner"
+                    className="group relative h-48 sm:h-60 w-full rounded-2xl overflow-hidden border-2 border-dashed border-stone-300 hover:border-[#1540a8] bg-stone-900 mb-4 shadow-sm cursor-pointer transition-all duration-300"
+                  >
                     <Image
                       src={bannerPreview || getBusinessBanner(myBusiness)}
                       alt={myBusiness.businessName}
                       fill
-                      className="object-cover"
+                      className="object-cover transition-transform duration-500 group-hover:scale-105"
                     />
-                    <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent" />
-                    <div className="absolute bottom-3 left-3 text-white">
-                      <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-400 text-[#07174a] px-2 py-0.5 rounded">
+                    <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
+
+                    {/* Interactive Hover Overlay on the Image */}
+                    <div className="absolute inset-0 flex flex-col items-center justify-center bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity duration-200 p-4 text-center">
+                      <div className="rounded-full bg-white/25 p-3.5 backdrop-blur-md border border-white/40 mb-2.5 shadow-lg group-hover:scale-110 transition-transform">
+                        <Camera className="h-6 w-6 text-white" />
+                      </div>
+                      <span className="text-white text-xs sm:text-sm font-bold tracking-wide bg-[#07174a]/85 px-4 py-1.5 rounded-full border border-white/30 shadow-md">
+                        Click on image to upload new banner
+                      </span>
+                      <span className="text-white/85 text-[11px] mt-1.5 drop-shadow">
+                        JPG, PNG, WebP • Auto-fits 1200 × 500 banner aspect
+                      </span>
+                    </div>
+
+                    {/* Top Right "Change Banner Photo" Action Badge */}
+                    <div className="absolute top-3 right-3 z-10">
+                      <span className="inline-flex items-center gap-1.5 rounded-lg bg-black/65 hover:bg-black/85 backdrop-blur-md text-white text-[11px] font-bold px-3 py-1.5 border border-white/30 shadow-md transition-all">
+                        <Camera className="h-3.5 w-3.5 text-amber-400" />
+                        <span>Change Banner (Click on Image)</span>
+                      </span>
+                    </div>
+
+                    {/* Bottom Info Overlay */}
+                    <div className="absolute bottom-3 left-3 text-white pointer-events-none z-10">
+                      <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-400 text-[#07174a] px-2 py-0.5 rounded font-bold shadow-xs">
                         {myBusiness.industry}
                       </span>
-                      <div className="font-serif-heading font-bold text-sm mt-0.5">
+                      <div className="font-serif-heading font-bold text-sm sm:text-base mt-1 drop-shadow">
                         {myBusiness.businessName}
                       </div>
                     </div>
+
+                    {/* Uploading indicator over the image if active */}
+                    {savingBanner && (
+                      <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-black/75 backdrop-blur-xs text-white">
+                        <div className="h-8 w-8 animate-spin rounded-full border-3 border-amber-400 border-t-transparent mb-2" />
+                        <span className="text-xs font-bold text-white">Uploading & Applying Banner…</span>
+                      </div>
+                    )}
                   </div>
+
+                  {/* Hidden file input controlled by image click and button */}
+                  <input
+                    ref={bannerFileInputRef}
+                    type="file"
+                    accept="image/*"
+                    onChange={handleBannerFileUpload}
+                    className="hidden"
+                  />
 
                   {/* Upload Controls */}
                   <div className="space-y-3">
                     {/* Dimension & File Size Guidance */}
                     <div className="flex flex-wrap items-center justify-between gap-2 text-[11px] text-slate-600 bg-white border border-stone-200 rounded-lg px-3.5 py-2 shadow-2xs">
                       <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-slate-800">Required Dimensions:</span>
-                        <span className="font-mono text-[#1540a8] font-bold">1200 × 500 px</span>
-                        <span className="text-slate-500">(Landscape 16:9, min 600 × 250 px)</span>
+                        <span className="font-bold text-slate-800">Direct Upload:</span>
+                        <span className="text-slate-500">Click anywhere on the preview image above to upload</span>
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <span className="font-bold text-slate-800">Maximum File Size:</span>
-                        <span className="font-mono text-amber-700 font-bold">500 KB</span>
-                        <span className="text-slate-500">(JPG, PNG, WebP)</span>
+                        <span className="font-bold text-slate-800">Optimal Aspect:</span>
+                        <span className="font-mono text-[#1540a8] font-bold">1200 × 500 px</span>
+                        <span className="text-slate-500">(Auto-optimized)</span>
                       </div>
                     </div>
 
@@ -536,23 +602,21 @@ export default function MemberDashboard() {
                       <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs px-3.5 py-2.5 font-medium flex items-start gap-2.5 animate-in fade-in">
                         <AlertCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
                         <div className="flex-1">
-                          <span className="font-bold">Image Dimension / Size Error: </span>
+                          <span className="font-bold">Image Error: </span>
                           {bannerError}
                         </div>
                       </div>
                     )}
 
                     <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
-                      <label className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-lg bg-white border border-stone-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs shrink-0">
+                      <button
+                        type="button"
+                        onClick={() => bannerFileInputRef.current?.click()}
+                        className="cursor-pointer inline-flex items-center justify-center gap-2 rounded-lg bg-white border border-stone-300 px-4 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition-colors shadow-xs shrink-0"
+                      >
                         <Camera className="h-4 w-4 text-[#1540a8]" />
                         <span>Upload Banner File</span>
-                        <input
-                          type="file"
-                          accept="image/*"
-                          onChange={handleBannerFileUpload}
-                          className="hidden"
-                        />
-                      </label>
+                      </button>
 
                       <div className="flex-1 flex items-center">
                         <input
@@ -569,7 +633,7 @@ export default function MemberDashboard() {
                       </div>
 
                       <button
-                        onClick={handleSaveBanner}
+                        onClick={() => handleSaveBanner()}
                         disabled={savingBanner || (!bannerInputUrl && !bannerPreview) || !!bannerError}
                         className="inline-flex items-center justify-center gap-1.5 rounded-lg bg-[#1540a8] hover:bg-[#07174a] text-white px-5 py-2 text-xs font-bold transition-all disabled:opacity-50 cursor-pointer shrink-0"
                       >

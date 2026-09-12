@@ -28,7 +28,7 @@ export const SEED_INDUSTRIES = [
   { id: 'ind-5', name: 'Hospitals & Healthcare', icon: '🏥', category: 'Service Provider', imageUrl: 'https://images.unsplash.com/photo-1519494026892-80bbd2d6fd0d?auto=format&fit=crop&w=600&q=80' },
   { id: 'ind-6', name: 'Hotels & Hospitality', icon: '🏨', category: 'Service Provider', imageUrl: 'https://images.unsplash.com/photo-1566073771259-6a8506099945?auto=format&fit=crop&w=600&q=80' },
   { id: 'ind-7', name: 'Transporters & Logistics', icon: '🚛', category: 'Distribution', imageUrl: 'https://images.unsplash.com/photo-1519003722824-194d4455a60c?auto=format&fit=crop&w=600&q=80' },
-  { id: 'ind-8', name: 'Chartered Accountants & Audit', icon: '📊', category: 'Professional', imageUrl: 'https://images.unsplash.com/photo-1450133064473-71024230f91b?auto=format&fit=crop&w=600&q=80' },
+  { id: 'ind-8', name: 'Chartered Accountants & Audit', icon: '📊', category: 'Professional', imageUrl: 'https://images.unsplash.com/photo-1554224155-8d04cb21cd6c?auto=format&fit=crop&w=1200&q=80' },
   { id: 'ind-9', name: 'Software Development & IT', icon: '💻', category: 'Professional', imageUrl: 'https://images.unsplash.com/photo-1498050108023-c5249f4df085?auto=format&fit=crop&w=600&q=80' },
   { id: 'ind-10', name: 'Advocates & Law Firms', icon: '⚖️', category: 'Professional', imageUrl: 'https://images.unsplash.com/photo-1589829545856-d10d557cf95f?auto=format&fit=crop&w=600&q=80' },
   { id: 'ind-11', name: 'Real Estate & Infrastructure', icon: '🏗️', category: 'Manufacturing', imageUrl: 'https://images.unsplash.com/photo-1486406146926-c627a92ad1ab?auto=format&fit=crop&w=600&q=80' },

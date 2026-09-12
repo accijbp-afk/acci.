@@ -338,10 +338,19 @@ function DirectoryContent() {
                         <span className="truncate">{biz.timing}</span>
                       </div>
                     )}
-                    <div className="flex items-center gap-1.5 text-amber-500 font-semibold">
-                      <Star className="h-3.5 w-3.5 fill-amber-400 shrink-0" />
-                      <span className="text-slate-800">{biz.rating || 4.8}</span>
-                      <span className="text-slate-400 text-[11px]">({biz.reviewCount || 10} reviews)</span>
+                    <div className="flex items-center gap-1.5 font-semibold">
+                      {biz.rating && biz.rating > 0 && biz.reviewCount && biz.reviewCount > 0 ? (
+                        <>
+                          <Star className="h-3.5 w-3.5 fill-amber-400 text-amber-500 shrink-0" />
+                          <span className="text-slate-800">{biz.rating.toFixed(1)}</span>
+                          <span className="text-slate-400 text-[11px]">({biz.reviewCount} {biz.reviewCount === 1 ? 'review' : 'reviews'})</span>
+                        </>
+                      ) : (
+                        <div className="flex items-center gap-1 text-slate-400 font-normal">
+                          <Star className="h-3.5 w-3.5 text-slate-300 shrink-0" />
+                          <span className="text-slate-500 text-[11px]">No reviews yet</span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
