@@ -432,7 +432,7 @@ export default function HomePage() {
                 {t('No Event Archives Yet')}
               </h3>
               <p className="text-xs text-slate-300 mt-1">
-                {t('Concluded events and photographs will be published here by the secretariat.')}
+                {t('Concluded events and photographs will be published here soon.')}
               </p>
             </div>
           ) : (

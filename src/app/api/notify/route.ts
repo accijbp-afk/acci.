@@ -114,10 +114,10 @@ function renderEmailTemplate({
             <tr>
               <td style="background-color: #f1f5f9; padding: 18px 30px; text-align: center; border-top: 1px solid #e2e8f0;">
                 <p style="margin: 0; font-size: 11px; color: #64748b; font-weight: 500;">
-                  Agrawal Chamber of Commerce &amp; Industries &bull; Secretariat Office, Jabalpur (M.P.)
+                  Agrawal Chamber of Commerce &amp; Industries &bull; Chamber Office, Jabalpur (M.P.)
                 </p>
                 <p style="margin: 4px 0 0 0; font-size: 10px; color: #94a3b8;">
-                  Dedicated Secretariat Helpline: +91 8319565363 &bull; Official Email: accijbp@gmail.com
+                  Dedicated Helpline: +91 8319565363 &bull; Email: accijbp@gmail.com
                 </p>
               </td>
             </tr>
@@ -378,7 +378,7 @@ export async function POST(req: NextRequest) {
           { label: 'Delivery Protocol', value: `SMTP SSL (${smtpConfig.host}:${smtpConfig.port})` },
           { label: 'Dispatch Timestamp', value: new Date().toLocaleString('en-IN', { timeZone: 'Asia/Kolkata' }) },
         ],
-        actionText: 'Open Secretariat Admin',
+        actionText: 'Open Admin Panel',
         actionUrl: 'https://accijabalpur.com/admin',
         footerNote: 'All platform events (new accounts, member verifications, reviews, job postings) will now deliver live to this email.',
       });

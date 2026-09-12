@@ -229,13 +229,13 @@ export default function AdminDashboard() {
         notificationService.notifyMember(target.email, {
           event: 'ACCOUNT_REJECTED',
           title: `Chamber Application Update: ${target.businessName}`,
-          subtitle: `Your enterprise registration has been marked as rejected or requires revisions by the Secretariat.`,
+          subtitle: `Your enterprise registration requires revisions or updates by our team.`,
           details: [
             { label: 'Enterprise Name', value: target.businessName },
             { label: 'Status', value: 'Application Declined' },
-            { label: 'Action Required', value: 'Please contact Secretariat Helpdesk to rectify documentation.' },
+            { label: 'Action Required', value: 'Please contact our team to rectify documentation.' },
           ],
-          actionText: 'Contact Secretariat',
+          actionText: 'Contact Us',
           actionUrl: '/contact',
         });
       }
@@ -245,7 +245,7 @@ export default function AdminDashboard() {
     notificationService.notifyAdmin({
       event: 'MEMBER_STATUS_CHANGED',
       title: `Member Status Updated: ${target?.businessName || id} -> ${status.toUpperCase()}`,
-      subtitle: `Secretariat action executed for ${target?.businessName || id}.`,
+      subtitle: `Status update executed for ${target?.businessName || id}.`,
       details: [
         { label: 'Enterprise', value: target?.businessName || id },
         { label: 'New Status', value: status.toUpperCase() },
@@ -322,7 +322,7 @@ export default function AdminDashboard() {
         notificationService.notifyMember(memberEmail, {
           event: 'PROFILE_UPDATED',
           title: `Chamber Profile Updated: ${editMemberForm.businessName || editingMember.businessName}`,
-          subtitle: `Your business profile details were updated by the ACCI Secretariat.`,
+          subtitle: `Your business profile details were updated by the ACCI team.`,
           details: [
             { label: 'Enterprise Name', value: editMemberForm.businessName || editingMember.businessName },
             { label: 'Category', value: editMemberForm.category || editingMember.category },
@@ -513,7 +513,7 @@ export default function AdminDashboard() {
         notificationService.notifyMember(targetBiz.email, {
           event: 'NEW_REVIEW_RECEIVED',
           title: `New Verified Review Published: ${targetRev.businessName}`,
-          subtitle: `A customer review from ${targetRev.reviewerName} (${targetRev.rating}★) has been approved by the Secretariat and is now live on your Chamber directory profile.`,
+          subtitle: `A customer review from ${targetRev.reviewerName} (${targetRev.rating}★) has been approved and is now live on your Chamber directory profile.`,
           details: [
             { label: 'Reviewer Name', value: targetRev.reviewerName },
             { label: 'Rating', value: `${targetRev.rating} / 5 Stars` },
@@ -776,7 +776,7 @@ export default function AdminDashboard() {
             <div>
               <div className="flex items-center gap-2">
                 <h1 className="font-serif-heading text-xl sm:text-2xl font-bold text-white">
-                  ACCI Secretariat Control Panel
+                  ACCI Admin Control Panel
                 </h1>
                 <span className="rounded bg-red-600/80 px-2 py-0.5 text-[10px] font-mono uppercase tracking-wider text-white">
                   Superadmin
@@ -904,7 +904,7 @@ export default function AdminDashboard() {
                   {inquiries.length}
                 </div>
                 <span className="text-[11px] text-slate-500 mt-1 block">
-                  Secretariat inbox
+                  Contact desk inbox
                 </span>
               </div>
             </div>
@@ -1387,7 +1387,7 @@ export default function AdminDashboard() {
         {activeTab === 'inquiries' && (
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="font-serif-heading text-lg font-bold text-[#07174a] mb-1">
-              Secretariat Inquiries Inbox
+              Contact Inquiries Inbox
             </h2>
             <p className="text-xs text-slate-500 mb-6">Messages received from the contact page and partnership requests.</p>
 
@@ -1930,7 +1930,7 @@ export default function AdminDashboard() {
                         onClick={() =>
                           setLegalDoc({
                             ...legalDoc,
-                            content: legalDoc.content + '\n\n## Secretariat Contact & Legal Notices\nFor official notices, write to: accijbp@gmail.com or visit Civic Centre, Jabalpur.\n',
+                            content: legalDoc.content + '\n\n## Contact & Legal Notices\nFor official notices, write to: accijbp@gmail.com or visit Civic Centre, Jabalpur.\n',
                           })
                         }
                         className="rounded bg-white px-2 py-1 text-[11px] font-semibold text-slate-700 border border-slate-200 hover:bg-slate-100 cursor-pointer"
@@ -2020,7 +2020,7 @@ export default function AdminDashboard() {
                     </div>
                     <div>
                       <h2 className="font-serif-heading text-lg font-bold text-[#07174a]">
-                        Secretariat Email & Notification Center
+                        Admin Email & Notification Center
                       </h2>
                       <p className="text-xs text-slate-500">
                         Manage automated alerts dispatched to <strong>accijbp@gmail.com</strong> and registered member inboxes.
@@ -2210,7 +2210,7 @@ export default function AdminDashboard() {
 
                   <div>
                     <label className="block font-semibold text-slate-700 mb-1">
-                      Secretariat Notification Inbox
+                      Admin Notification Inbox
                     </label>
                     <input
                       type="email"
@@ -2696,7 +2696,7 @@ export default function AdminDashboard() {
             <div className="bg-[#07174a] text-white p-5 sm:p-6 flex items-start justify-between border-b-4 border-amber-400">
               <div>
                 <span className="text-[10px] font-bold uppercase tracking-wider text-amber-300 block mb-1">
-                  Secretariat Directory Moderation
+                  Admin Directory Moderation
                 </span>
                 <h3 className="font-serif-heading text-xl sm:text-2xl font-bold">
                   Edit Member: {editMemberForm.businessName || editingMember.businessName}

@@ -78,7 +78,7 @@ export default function GalleryPage() {
               No Event Archives Yet
             </h3>
             <p className="text-xs text-slate-500 mt-1">
-              Concluded events and photographs will be published here by the secretariat.
+              Concluded events and photographs will be published here soon.
             </p>
           </div>
         ) : (

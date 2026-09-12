@@ -77,7 +77,7 @@ export default function MembershipPage() {
 
       setSubmittedId(res.id);
 
-      // Notify Secretariat Admin at accijbp@gmail.com
+      // Notify Admin at accijbp@gmail.com
       notificationService.notifyAdmin({
         event: 'MEMBERSHIP_APPLICATION',
         title: `New Business Membership Application: ${form.businessName}`,
@@ -101,13 +101,13 @@ export default function MembershipPage() {
         notificationService.notifyMember(form.email, {
           event: 'APPLICATION_RECEIVED',
           title: `Application Received: ${form.businessName}`,
-          subtitle: `Thank you for applying for ACCI Chamber Directory listing. Your application has been submitted to the Secretariat for verification.`,
+          subtitle: `Thank you for applying for ACCI Chamber Directory listing. Your application has been received and our team will review it.`,
           details: [
             { label: 'Enterprise Name', value: form.businessName },
             { label: 'Proprietor', value: form.ownerName },
             { label: 'Classification', value: form.category },
             { label: 'Application ID', value: res.id },
-            { label: 'Next Step', value: 'Secretariat verification and approval within 24–48 hours' },
+            { label: 'Next Step', value: 'Our team will review and approve your listing within 24–48 hours' },
           ],
           actionText: 'Explore Chamber Directory',
           actionUrl: '/directory',
@@ -163,7 +163,7 @@ export default function MembershipPage() {
                 </h3>
                 <p className="text-xs text-emerald-800 mt-2 max-w-md mx-auto leading-relaxed">
                   Your enterprise details have been recorded under Application Reference ID{' '}
-                  <strong className="font-mono">{submittedId}</strong>. The ACCI Secretariat in Jabalpur will verify community details and approve your listing within 24–48 hours.
+                  <strong className="font-mono">{submittedId}</strong>. Our team in Jabalpur will verify details and approve your listing within 24–48 hours.
                 </p>
                 <div className="mt-6 flex justify-center gap-3">
                   <Link

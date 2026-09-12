@@ -121,7 +121,7 @@ export const authService = {
           console.warn('Appwrite session notice, using verified admin session:', err);
           const adminProfile: UserProfile = {
             userId: 'admin_acci_org',
-            name: 'ACCI Secretariat Administrator',
+            name: 'ACCI Administrator',
             email,
             phone: '+91 8319565363',
             city: 'Jabalpur',
@@ -144,7 +144,7 @@ export const authService = {
 
     const mockUser: UserProfile = {
       userId: 'usr_local_demo',
-      name: email === 'admin@acci.org' ? 'Chamber Secretariat Admin' : email.split('@')[0],
+      name: email === 'admin@acci.org' ? 'Chamber Admin' : email.split('@')[0],
       email,
       phone: '+91 8319565363',
       city: 'Jabalpur',

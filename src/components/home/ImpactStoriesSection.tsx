@@ -355,7 +355,7 @@ export default function ImpactStoriesSection() {
                   Thank You for Sharing Your Story!
                 </h3>
                 <p className="text-xs sm:text-sm text-slate-600 mt-2 max-w-md mx-auto leading-relaxed">
-                  Your impact story has been submitted to the ACCI Secretariat. Once verified and approved by the admin team, it will be proudly featured on our main page.
+                  Your impact story has been received. Once verified and approved by our team, it will be proudly featured on our main page.
                 </p>
                 <button
                   onClick={() => setShowSubmitModal(false)}

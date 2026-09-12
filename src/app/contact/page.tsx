@@ -23,10 +23,10 @@ export default function ContactPage() {
       await inquiriesService.submitContact(form);
       setSuccess(true);
 
-      // Notify Secretariat Admin at accijbp@gmail.com
+      // Notify Admin at accijbp@gmail.com
       notificationService.notifyAdmin({
         event: 'INQUIRY_SUBMITTED',
-        title: `New Secretariat Inquiry: ${form.subject}`,
+        title: `New Contact Inquiry: ${form.subject}`,
         subtitle: `A public communication has been submitted via the ACCI Contact Desk.`,
         details: [
           { label: 'Sender Name', value: form.name },
@@ -43,12 +43,12 @@ export default function ContactPage() {
         notificationService.notifyMember(form.email, {
           event: 'INQUIRY_ACKNOWLEDGED',
           title: `We have received your message, ${form.name}`,
-          subtitle: `Thank you for contacting the Agrawal Chamber of Commerce & Industries (ACCI) Jabalpur Secretariat.`,
+          subtitle: `Thank you for contacting Agrawal Chamber of Commerce & Industries (ACCI) Jabalpur. Our team will get in touch with you shortly.`,
           details: [
             { label: 'Subject Reference', value: form.subject },
             { label: 'Contact Phone', value: form.phone || 'N/A' },
-            { label: 'Inquiry Status', value: 'Forwarded to Secretariat Officer' },
-            { label: 'Response Window', value: 'Within 24–48 working hours' },
+            { label: 'Inquiry Status', value: 'Forwarded to ACCI Team' },
+            { label: 'Response Window', value: 'Our team will get in touch within 24–48 working hours' },
           ],
           actionText: 'Visit ACCI Portal',
           actionUrl: '/',
@@ -134,7 +134,7 @@ export default function ContactPage() {
                     Message Received
                   </h3>
                   <p className="text-xs text-emerald-800 mt-1">
-                    Thank you! The ACCI Secretariat will review your inquiry and get back to you shortly.
+                    Thank you! Our team will review your message and get in touch with you shortly.
                   </p>
                   <button
                     onClick={() => setSuccess(false)}

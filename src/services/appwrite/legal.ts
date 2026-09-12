@@ -10,7 +10,7 @@ const DEFAULT_TERMS: LegalDocument = {
 The Agrawal Chamber of Commerce & Industries (ACCI), Jabalpur is an apex trade and commercial organization operating under the highest standards of mercantile ethics and community welfare. By applying for membership, registering an enterprise, posting vacancies, or utilizing this portal, you agree to comply with the Chamber bylaws and governing guidelines.
 
 ## 2. Membership Eligibility & Verification
-All enterprises listed in the directory must belong to members of the Agrawal community or their legally recognized partnerships and corporate entities. The ACCI Secretariat reserves the right to request physical or documentary verification of business credentials, GST registrations, or trade licenses before according verified status.
+All enterprises listed in the directory must belong to members of the Agrawal community or their legally recognized partnerships and corporate entities. The ACCI team reserves the right to request physical or documentary verification of business credentials, GST registrations, or trade licenses before according verified status.
 
 ## 3. Directory Accuracy & Code of Conduct
 Members must provide genuine, non-misleading details regarding their goods, services, and commercial terms. Spurious trade listings, fraudulent claims, or conduct detrimental to the community reputation will result in immediate delisting and revocation of Chamber privileges upon council resolution.
@@ -18,8 +18,8 @@ Members must provide genuine, non-misleading details regarding their goods, serv
 ## 4. Commercial Mediation & Arbitration
 ACCI offers conciliation and voluntary commercial dispute resolution between member enterprises through its Senior Advisory Panel. Decisions reached through formal Chamber conciliation are considered morally binding upon members honoring community traditions.
 
-## 5. Secretariat Contact & Legal Notices
-For official legal notices or Chamber constitution queries, please write to: accijbp@gmail.com or visit the Secretariat at Civic Centre, Jabalpur.`,
+## 5. Contact & Legal Notices
+For official legal notices or Chamber constitution queries, please write to: accijbp@gmail.com or visit the Chamber Office at Civic Centre, Jabalpur.`,
 };
 
 const DEFAULT_PRIVACY: LegalDocument = {
@@ -38,13 +38,13 @@ When you list an enterprise or create a member account, we collect:
 - Delegate pass details for Chamber conclaves and symposiums.
 
 ## 3. Purpose of Processing
-Your data is utilized exclusively to display public commercial directory cards, enable direct buyer inquiries via phone or WhatsApp, issue official event badges, and dispatch important Chamber circulars or taxation notices. We do not sell or monetize member data to third-party marketing brokers.
+Your data is utilized exclusively to display public commercial directory cards, enable direct buyer inquiries via phone or WhatsApp, issue official event badges, and dispatch important Chamber updates or taxation notices. We do not sell or monetize member data to third-party marketing brokers.
 
 ## 4. Secure Cloud Infrastructure & Governance
 Authentication and database operations are managed via secure cloud database services with strict role-based access control and encrypted session management.
 
 ## 5. Inquiries & Data Rights
-To request rectification or removal of your business directory listing, contact the Secretariat at accijbp@gmail.com.`,
+To request rectification or removal of your business directory listing, contact our team at accijbp@gmail.com.`,
 };
 
 const STORAGE_KEY_PREFIX = 'acci_legal_doc_';

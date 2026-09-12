@@ -82,8 +82,8 @@ export default function FeatureBusinessSection() {
               </div>
 
               <div className="pt-8 mt-8 border-t border-white/15 text-[11px] text-slate-400">
-                <span>Secretariat Coordination: </span>
-                <span className="text-amber-300 font-semibold">Spotlight listings are coordinated directly with the Chamber desk.</span>
+                <span>Assistance: </span>
+                <span className="text-amber-300 font-semibold">Our team will get in touch with you to assist with your listing.</span>
               </div>
             </div>
 
@@ -98,7 +98,7 @@ export default function FeatureBusinessSection() {
                     Contact Us
                   </h3>
                   <p className="text-xs sm:text-sm text-slate-600 mt-2 leading-relaxed">
-                    To feature your enterprise, showroom, or industrial unit on the ACCI homepage spotlight, get in touch directly with our Secretariat team via Phone, WhatsApp, or Email.
+                    To feature your enterprise, showroom, or industrial unit on the ACCI homepage spotlight, get in touch with our team via Phone, WhatsApp, or Email. Our team will get in touch and assist you.
                   </p>
                 </div>
 
@@ -158,7 +158,7 @@ export default function FeatureBusinessSection() {
                         </div>
                         <div>
                           <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
-                            Secretariat Official Email
+                            Official Email
                           </span>
                           <a
                             href="mailto:accijbp@gmail.com?subject=Inquiry%20to%20Feature%20Business%20on%20ACCI%20Homepage"
@@ -182,7 +182,7 @@ export default function FeatureBusinessSection() {
                     </div>
                   </div>
 
-                  {/* Chamber Secretariat Office */}
+                  {/* Chamber Office */}
                   <div className="rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
                     <div className="flex items-start gap-3.5">
                       <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-[#07174a] text-amber-400 shadow-xs">
@@ -190,7 +190,7 @@ export default function FeatureBusinessSection() {
                       </div>
                       <div>
                         <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400 block">
-                          Chamber Secretariat
+                          Chamber Office
                         </span>
                         <p className="text-xs sm:text-sm font-semibold text-slate-800 mt-0.5">
                           Agrawal Chamber of Commerce &amp; Industries (ACCI)
