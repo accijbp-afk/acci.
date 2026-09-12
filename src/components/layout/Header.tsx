@@ -12,6 +12,7 @@ import {
   Phone,
   Mail,
   User,
+  LogIn,
   ShieldCheck,
   ChevronDown,
   Building2,
@@ -139,13 +140,13 @@ export const Header: React.FC = () => {
               href="/login"
               className="flex items-center gap-1.5 rounded-md border border-white/25 px-3 py-1.5 text-xs font-semibold text-slate-200 hover:bg-white/10 hover:text-white transition-all"
             >
-              <User className="h-3.5 w-3.5 text-amber-300" />
-              <span>{t('Member Portal')}</span>
+              <LogIn className="h-3.5 w-3.5 text-amber-300" />
+              <span>{t('Login')}</span>
             </Link>
           )}
 
           <Link
-            href="/membership"
+            href="/register"
             className="flex items-center gap-1 rounded-md bg-gradient-to-r from-amber-400 to-amber-500 px-3.5 py-1.5 text-xs font-bold text-[#07174a] shadow hover:from-amber-300 hover:to-amber-400 transition-all hover:-translate-y-0.5"
           >
             <span>{t('Become a Member')}</span>
@@ -217,18 +218,19 @@ export const Header: React.FC = () => {
                 <Link
                   href="/login"
                   onClick={() => setMobileMenuOpen(false)}
-                  className="flex items-center justify-center rounded-md border border-white/30 px-3 py-2 text-sm font-semibold text-white"
+                  className="flex items-center justify-center gap-2 rounded-md border border-white/30 px-3 py-2 text-sm font-semibold text-white hover:bg-white/10"
                 >
-                  {t('btn_login', 'Member Portal Login')}
+                  <LogIn className="h-4 w-4 text-amber-300" />
+                  <span>{t('Login')}</span>
                 </Link>
               )}
 
               <Link
-                href="/membership"
+                href="/register"
                 onClick={() => setMobileMenuOpen(false)}
                 className="flex items-center justify-center rounded-md bg-amber-400 px-3 py-2 text-sm font-bold text-[#07174a]"
               >
-                {t('btn_join', 'Become a Member')}
+                {t('Become a Member')}
               </Link>
 
               {/* Mobile Lawgical Startup Badge */}

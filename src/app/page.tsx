@@ -7,12 +7,12 @@ import { useRouter } from 'next/navigation';
 import { useLanguage } from '@/components/common/LanguageContext';
 import { membersService } from '@/services/appwrite/members';
 import { jobsService } from '@/services/appwrite/jobs';
-import { newsService } from '@/services/appwrite/news';
 import { galleryService } from '@/services/appwrite/gallery';
 import { SEED_CATEGORIES, SEED_INDUSTRIES, SEED_GALLERY } from '@/services/seedData';
-import { MemberBusiness, JobListing, ChamberNews, GalleryAlbum } from '@/types';
+import { MemberBusiness, JobListing, GalleryAlbum } from '@/types';
 import { getBusinessBanner } from '@/utils/businessImage';
 import ImpactStoriesSection from '@/components/home/ImpactStoriesSection';
+import FeatureBusinessSection from '@/components/home/FeatureBusinessSection';
 import {
   Search,
   CheckCircle2,
@@ -40,7 +40,6 @@ export default function HomePage() {
   const [featuredMembers, setFeaturedMembers] = useState<MemberBusiness[]>([]);
   const [galleryAlbums, setGalleryAlbums] = useState<GalleryAlbum[]>([]);
   const [recentJobs, setRecentJobs] = useState<JobListing[]>([]);
-  const [chamberNews, setChamberNews] = useState<ChamberNews[]>([]);
   const [activeModalMember, setActiveModalMember] = useState<MemberBusiness | null>(null);
   const [activeGalleryItem, setActiveGalleryItem] = useState<GalleryAlbum | null>(null);
 
@@ -50,7 +49,6 @@ export default function HomePage() {
       .then((res) => setFeaturedMembers(res.members));
     galleryService.getAlbums().then((albs) => setGalleryAlbums(albs.slice(0, 4)));
     jobsService.getJobs({ activeOnly: true }).then((jbs) => setRecentJobs(jbs.slice(0, 3)));
-    newsService.getNews().then((news) => setChamberNews(news));
   }, []);
 
   const handleSearchSubmit = (e: React.FormEvent) => {
@@ -64,21 +62,6 @@ export default function HomePage() {
 
   return (
     <div className="flex flex-col min-h-screen bg-[#faf8f5]">
-      {/* ── 0. CHAMBER NEWS TICKER TAPE ───────────────────── */}
-      <div className="bg-[#051136] border-b border-amber-400/30 text-xs text-white py-2 px-4">
-        <div className="mx-auto max-w-7xl flex items-center gap-3">
-          <span className="inline-flex items-center gap-1.5 rounded-full bg-red-600/90 px-2.5 py-0.5 text-[10px] font-bold tracking-wider uppercase shrink-0">
-            <span className="h-1.5 w-1.5 rounded-full bg-white animate-pulse" />
-            {t('Chamber News')}
-          </span>
-          <div className="text-slate-200 text-xs font-medium truncate flex-1">
-            {chamberNews.length > 0
-              ? chamberNews.map((n) => n.title).join('  •  ')
-              : t('Agrawal Chamber of Commerce & Industries (ACCI) Jabalpur • Official Business Portal')}
-          </div>
-        </div>
-      </div>
-
       {/* ── 1. CENTERED HERO SECTION ──────────────────────── */}
       <section className="relative overflow-hidden bg-gradient-to-b from-[#07174a] via-[#091e5e] to-[#040e30] text-white pt-14 pb-20 border-b border-amber-500/20">
         {/* Subtle geometric jali filigree background overlay */}
@@ -602,6 +585,9 @@ export default function HomePage() {
 
       {/* ── 8.5 COMMUNITY IMPACT STORIES ──────────────────────────── */}
       <ImpactStoriesSection />
+
+      {/* ── 8.8 FEATURE YOUR BUSINESS SPOTLIGHT FORM ──────────────── */}
+      <FeatureBusinessSection />
 
       {/* ── 9. THREE-STEP ENTERPRISE ENROLMENT ───────────────────────── */}
       <section className="py-16 bg-gradient-to-br from-[#07174a] via-[#0b2168] to-[#040e30] text-white">

@@ -79,6 +79,7 @@ const ALLOWED_MEMBER_KEYS = new Set([
   'rating',
   'reviewCount',
   'workPhotos',
+  'bannerUrl',
   'logoUrl',
   'joinedAt',
 ]);
@@ -95,6 +96,10 @@ function sanitizeMemberPayload(data: Record<string, any>): Record<string, any> {
     if (ALLOWED_MEMBER_KEYS.has(key) && val !== undefined && val !== null) {
       sanitized[key] = val;
     }
+  }
+
+  if (data.bannerUrl !== undefined) {
+    sanitized.bannerUrl = data.bannerUrl;
   }
 
   sanitized.description = desc || 'Chamber member business in Jabalpur';
@@ -394,6 +399,13 @@ export const membersService = {
     if (idx !== -1) {
       local[idx] = { ...local[idx], ...updates };
       saveLocalMembers(local);
+      if (typeof window !== 'undefined' && updates.bannerUrl !== undefined) {
+        if (updates.bannerUrl) {
+          localStorage.setItem(`acci_banner_${local[idx].id}`, updates.bannerUrl);
+        } else {
+          localStorage.removeItem(`acci_banner_${local[idx].id}`);
+        }
+      }
       return local[idx];
     }
     return null;

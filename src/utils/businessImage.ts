@@ -15,6 +15,14 @@ export function getBusinessBanner(biz: Partial<MemberBusiness> | null | undefine
     return biz.bannerUrl.trim();
   }
 
+  // Check cached custom banner in localStorage (instant offline and upload resilience)
+  if (typeof window !== 'undefined' && biz.id) {
+    const cached = localStorage.getItem(`acci_banner_${biz.id}`);
+    if (cached && cached.trim()) {
+      return cached.trim();
+    }
+  }
+
   if (biz.workPhotos && biz.workPhotos.length > 0 && biz.workPhotos[0]?.trim()) {
     return biz.workPhotos[0].trim();
   }

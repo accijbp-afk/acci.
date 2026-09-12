@@ -7,6 +7,8 @@ import { useRouter } from 'next/navigation';
 import { authService } from '@/services/appwrite/auth';
 import { membersService } from '@/services/appwrite/members';
 import { jobsService } from '@/services/appwrite/jobs';
+import { storageService } from '@/services/appwrite/storage';
+import { notificationService } from '@/services/notifications';
 import { UserProfile, MemberBusiness, JobListing } from '@/types';
 import { getBusinessBanner, getIndustryFallbackImage } from '@/utils/businessImage';
 import {
@@ -27,6 +29,8 @@ import {
   Check,
   RefreshCw,
   AlertCircle,
+  ArrowRight,
+  Sparkles,
 } from 'lucide-react';
 
 export default function MemberDashboard() {
@@ -39,6 +43,7 @@ export default function MemberDashboard() {
 
   const [bannerInputUrl, setBannerInputUrl] = useState('');
   const [bannerPreview, setBannerPreview] = useState<string | null>(null);
+  const [selectedBannerFile, setSelectedBannerFile] = useState<File | null>(null);
   const [savingBanner, setSavingBanner] = useState(false);
   const [bannerSuccess, setBannerSuccess] = useState(false);
   const [bannerError, setBannerError] = useState<string | null>(null);
@@ -74,6 +79,9 @@ export default function MemberDashboard() {
     const file = e.target.files?.[0];
     if (!file) return;
 
+    // Keep reference to file for storage upload
+    setSelectedBannerFile(file);
+
     // Strict minimum file size limit: 500 KB (500 * 1024 bytes)
     const MAX_SIZE_BYTES = 500 * 1024;
     if (file.size > MAX_SIZE_BYTES) {
@@ -81,6 +89,7 @@ export default function MemberDashboard() {
         `File size (${(file.size / 1024).toFixed(0)} KB) exceeds the maximum allowed size of 500 KB. Image dimensions should be 1200 × 500 px. Please compress or resize your image.`
       );
       setBannerPreview(null);
+      setSelectedBannerFile(null);
       e.target.value = '';
       return;
     }
@@ -99,6 +108,7 @@ export default function MemberDashboard() {
             `Portrait image (${width} × ${height} px) is not allowed. The banner image must be horizontal/landscape with required dimensions of 1200 × 500 px.`
           );
           setBannerPreview(null);
+          setSelectedBannerFile(null);
           return;
         }
 
@@ -108,6 +118,7 @@ export default function MemberDashboard() {
             `Image resolution (${width} × ${height} px) is too small. Required dimensions: 1200 × 500 px (minimum 600 × 250 px, landscape).`
           );
           setBannerPreview(null);
+          setSelectedBannerFile(null);
           return;
         }
 
@@ -120,6 +131,7 @@ export default function MemberDashboard() {
       img.onerror = () => {
         setBannerError('Unable to read the image file. Please upload a standard JPG, PNG, or WebP photo.');
         setBannerPreview(null);
+        setSelectedBannerFile(null);
       };
 
       img.src = result;
@@ -130,16 +142,57 @@ export default function MemberDashboard() {
   const handleSaveBanner = async () => {
     if (!myBusiness) return;
     setSavingBanner(true);
-    const targetUrl = bannerInputUrl.trim() || bannerPreview || '';
+    let targetUrl = bannerInputUrl.trim() || bannerPreview || '';
+
+    // If a local file was selected, upload via storageService for a clean permanent URL
+    if (selectedBannerFile) {
+      try {
+        const uploadedUrl = await storageService.uploadFile(selectedBannerFile);
+        if (uploadedUrl) {
+          targetUrl = uploadedUrl;
+        }
+      } catch (uploadErr) {
+        console.warn('Storage upload notice, falling back to direct URL:', uploadErr);
+      }
+    }
+
+    if (!targetUrl) {
+      setSavingBanner(false);
+      return;
+    }
+
     const updated = await membersService.updateMember(myBusiness.id, {
       bannerUrl: targetUrl,
-      workPhotos: targetUrl ? [targetUrl] : [],
+      workPhotos: [targetUrl],
     });
+
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(`acci_banner_${myBusiness.id}`, targetUrl);
+    }
+
     if (updated) {
-      setMyBusiness(updated);
+      setMyBusiness({ ...updated, bannerUrl: targetUrl, workPhotos: [targetUrl] });
       setBannerSuccess(true);
       setBannerPreview(null);
+      setSelectedBannerFile(null);
       setTimeout(() => setBannerSuccess(false), 3500);
+
+      // Trigger email to registered member's email (Requirement 5)
+      if (user?.email) {
+        notificationService.notifyMember(user.email, {
+          event: 'PROFILE_UPDATED',
+          title: `Enterprise Display Banner Updated: ${myBusiness.businessName}`,
+          subtitle: `Your enterprise display banner for "${myBusiness.businessName}" has been successfully updated on the ACCI Jabalpur Portal.`,
+          details: [
+            { label: 'Enterprise Name', value: myBusiness.businessName },
+            { label: 'Industry Sector', value: myBusiness.industry },
+            { label: 'Update Date', value: new Date().toLocaleDateString('en-IN') },
+            { label: 'Listing Status', value: 'Live on Directory & Spotlight' },
+          ],
+          actionText: 'View Public Listing',
+          actionUrl: `/directory?search=${encodeURIComponent(myBusiness.businessName)}`,
+        });
+      }
     }
     setSavingBanner(false);
   };
@@ -147,16 +200,38 @@ export default function MemberDashboard() {
   const handleResetToFallback = async () => {
     if (!myBusiness) return;
     setSavingBanner(true);
+
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(`acci_banner_${myBusiness.id}`);
+    }
+
     const updated = await membersService.updateMember(myBusiness.id, {
       bannerUrl: '',
       workPhotos: [],
     });
+
     if (updated) {
-      setMyBusiness(updated);
+      setMyBusiness({ ...updated, bannerUrl: '', workPhotos: [] });
       setBannerInputUrl('');
       setBannerPreview(null);
+      setSelectedBannerFile(null);
       setBannerSuccess(true);
       setTimeout(() => setBannerSuccess(false), 3500);
+
+      // Trigger email to registered member's email (Requirement 5)
+      if (user?.email) {
+        notificationService.notifyMember(user.email, {
+          event: 'PROFILE_UPDATED',
+          title: `Enterprise Banner Reset: ${myBusiness.businessName}`,
+          subtitle: `Your banner has been reset to the official ACCI industry image.`,
+          details: [
+            { label: 'Enterprise Name', value: myBusiness.businessName },
+            { label: 'Current Display', value: `Official ${myBusiness.industry} Industry Image` },
+          ],
+          actionText: 'Open Member Dashboard',
+          actionUrl: '/dashboard',
+        });
+      }
     }
     setSavingBanner(false);
   };
@@ -216,6 +291,32 @@ export default function MemberDashboard() {
             </button>
           </div>
         </div>
+
+        {/* Onboarding Callout for New Members without an Enterprise */}
+        {!myBusiness && (
+          <div className="mb-8 rounded-2xl border-2 border-amber-400 bg-gradient-to-r from-[#07174a] via-[#0b2168] to-[#07174a] p-6 sm:p-7 text-white shadow-xl flex flex-col md:flex-row md:items-center justify-between gap-5 animate-in fade-in">
+            <div className="space-y-1.5">
+              <div className="inline-flex items-center gap-1.5 rounded-full bg-amber-400/20 text-amber-300 px-3 py-0.5 text-[10px] font-bold uppercase tracking-wider border border-amber-400/30">
+                <Sparkles className="h-3 w-3 text-amber-300" />
+                <span>Next Step • Register Your Enterprise</span>
+              </div>
+              <h3 className="font-serif-heading text-lg sm:text-xl font-bold text-white">
+                Welcome to ACCI, {user.name}!
+              </h3>
+              <p className="text-xs text-slate-300 max-w-xl leading-relaxed">
+                Your member account is active. To list your business in the official Jabalpur trade directory, get verified, and access member benefits, register your enterprise today.
+              </p>
+            </div>
+            <Link
+              href="/membership"
+              className="inline-flex items-center justify-center gap-2 rounded-xl bg-amber-400 px-6 py-3.5 text-xs font-bold text-[#07174a] hover:bg-amber-300 transition-all shadow-md shrink-0 hover:scale-105 cursor-pointer"
+            >
+              <Building2 className="h-4 w-4" />
+              <span>Register Your Enterprise Now</span>
+              <ArrowRight className="h-4 w-4" />
+            </Link>
+          </div>
+        )}
 
         {/* Tab Navigation */}
         <div className="flex items-center gap-2 border-b border-slate-200 mb-6 text-xs font-bold">
@@ -515,19 +616,23 @@ export default function MemberDashboard() {
                 </div>
               </div>
             ) : (
-              <div className="rounded-2xl border border-slate-200 bg-white p-12 text-center max-w-lg mx-auto">
-                <Building2 className="h-10 w-10 text-slate-400 mx-auto mb-3" />
-                <h3 className="font-serif-heading text-lg font-bold text-[#07174a]">
-                  No Enterprise Listing Associated
+              <div className="rounded-2xl border-2 border-dashed border-stone-300 bg-white p-10 sm:p-14 text-center max-w-xl mx-auto shadow-xs">
+                <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-amber-50 text-amber-600 mx-auto mb-4 border border-amber-200">
+                  <Building2 className="h-7 w-7" />
+                </div>
+                <h3 className="font-serif-heading text-xl font-bold text-[#07174a]">
+                  Register Your Enterprise
                 </h3>
-                <p className="text-xs text-slate-500 mt-1 mb-6">
-                  List your business to get verified on the official ACCI Jabalpur Directory.
+                <p className="text-xs text-slate-500 mt-2 mb-6 max-w-md mx-auto leading-relaxed">
+                  You haven&apos;t registered your business listing yet. Enrol your firm, showroom, manufacturing unit, or professional agency to get verified and published on the ACCI Jabalpur Portal.
                 </p>
                 <Link
                   href="/membership"
-                  className="rounded-lg bg-amber-400 px-5 py-2.5 text-xs font-bold text-[#07174a] hover:bg-amber-300"
+                  className="inline-flex items-center gap-2 rounded-xl bg-[#07174a] hover:bg-[#1540a8] px-6 py-3 text-xs font-bold text-white transition-all shadow-md hover:scale-105"
                 >
-                  List Business Now
+                  <Building2 className="h-4 w-4 text-amber-400" />
+                  <span>Enrol Enterprise Listing Now — Free</span>
+                  <ArrowRight className="h-4 w-4" />
                 </Link>
               </div>
             )}
