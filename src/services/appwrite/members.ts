@@ -625,4 +625,42 @@ export const membersService = {
     }
     return true;
   },
+
+  async deleteMember(id: string): Promise<boolean> {
+    if (isAppwriteConfigured()) {
+      try {
+        let docId = id;
+        try {
+          await databases.deleteDocument(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.members,
+            docId
+          );
+        } catch {
+          const found = await databases.listDocuments(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.members,
+            [Query.equal('id', id), Query.limit(1)]
+          );
+          if (found.documents.length > 0) {
+            await databases.deleteDocument(
+              APPWRITE_CONFIG.databaseId,
+              APPWRITE_CONFIG.collections.members,
+              found.documents[0].$id
+            );
+          }
+        }
+      } catch (err) {
+        console.warn('Appwrite delete member error:', err);
+      }
+    }
+
+    const local = getLocalMembers().filter((m) => m.id !== id && m.$id !== id);
+    saveLocalMembers(local);
+
+    if (typeof window !== 'undefined') {
+      localStorage.removeItem(`acci_banner_${id}`);
+    }
+    return true;
+  },
 };

@@ -93,4 +93,40 @@ export const inquiriesService = {
     }
     return false;
   },
+
+  async deleteInquiry(id: string): Promise<boolean> {
+    if (isAppwriteConfigured()) {
+      try {
+        let docId = id;
+        try {
+          await databases.deleteDocument(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.contact,
+            docId
+          );
+        } catch {
+          const found = await databases.listDocuments(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.contact,
+            [Query.equal('id', id), Query.limit(1)]
+          );
+          if (found.documents.length > 0) {
+            await databases.deleteDocument(
+              APPWRITE_CONFIG.databaseId,
+              APPWRITE_CONFIG.collections.contact,
+              found.documents[0].$id
+            );
+          }
+        }
+      } catch (err) {
+        console.warn('Appwrite delete inquiry error:', err);
+      }
+    }
+
+    const list = getLocalInquiries().filter((i) => i.id !== id && i.$id !== id);
+    if (typeof window !== 'undefined') {
+      localStorage.setItem(LOCAL_STORAGE_INQUIRIES_KEY, JSON.stringify(list));
+    }
+    return true;
+  },
 };

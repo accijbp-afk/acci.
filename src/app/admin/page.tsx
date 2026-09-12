@@ -7,7 +7,6 @@ import { authService } from '@/services/appwrite/auth';
 import { membersService } from '@/services/appwrite/members';
 import { eventsService } from '@/services/appwrite/events';
 import { galleryService } from '@/services/appwrite/gallery';
-import { newsService } from '@/services/appwrite/news';
 import { jobsService } from '@/services/appwrite/jobs';
 import { inquiriesService } from '@/services/appwrite/inquiries';
 import { storiesService } from '@/services/appwrite/stories';
@@ -16,7 +15,6 @@ import {
   MemberBusiness,
   ChamberEvent,
   GalleryAlbum,
-  ChamberNews,
   JobListing,
   ContactSubmission,
   BusinessReview,
@@ -29,7 +27,6 @@ import {
   Users,
   Calendar,
   Images,
-  Newspaper,
   Briefcase,
   Mail,
   Star,
@@ -63,7 +60,7 @@ export default function AdminDashboard() {
   const router = useRouter();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [activeTab, setActiveTab] = useState<
-    'overview' | 'vendors' | 'accounts' | 'events' | 'gallery' | 'news' | 'jobs' | 'inquiries' | 'reviews' | 'stories' | 'legal' | 'email'
+    'overview' | 'vendors' | 'accounts' | 'events' | 'gallery' | 'jobs' | 'inquiries' | 'reviews' | 'stories' | 'legal' | 'email'
   >('overview');
 
   // Data states
@@ -71,7 +68,6 @@ export default function AdminDashboard() {
   const [usersList, setUsersList] = useState<UserProfile[]>([]);
   const [events, setEvents] = useState<ChamberEvent[]>([]);
   const [albums, setAlbums] = useState<GalleryAlbum[]>([]);
-  const [news, setNews] = useState<ChamberNews[]>([]);
   const [jobs, setJobs] = useState<JobListing[]>([]);
   const [inquiries, setInquiries] = useState<ContactSubmission[]>([]);
   const [reviews, setReviews] = useState<BusinessReview[]>([]);
@@ -164,22 +160,11 @@ export default function AdminDashboard() {
   });
   const [previewAlbum, setPreviewAlbum] = useState<GalleryAlbum | null>(null);
 
-  // New News Form State
-  const [showAddNewsModal, setShowAddNewsModal] = useState(false);
-  const [newArticle, setNewArticle] = useState({
-    title: '',
-    category: 'Chamber Circular',
-    excerpt: '',
-    content: '',
-    author: 'Secretariat, ACCI Jabalpur',
-  });
-
   const loadAllData = async () => {
     setLoading(true);
-    const [vRes, evRes, nRes, jRes, inqRes, revRes, galRes, uList, stRes] = await Promise.all([
+    const [vRes, evRes, jRes, inqRes, revRes, galRes, uList, stRes] = await Promise.all([
       membersService.getMembers({ status: 'all' }),
       eventsService.getEvents(),
-      newsService.getNews(),
       jobsService.getJobs(),
       inquiriesService.getInquiries(),
       membersService.getAllReviewsAdmin(),
@@ -190,7 +175,6 @@ export default function AdminDashboard() {
 
     setVendors(vRes.members);
     setEvents(evRes);
-    setNews(nRes);
     setJobs(jRes);
     setInquiries(inqRes);
     setReviews(revRes);
@@ -488,27 +472,29 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleCreateNews = async (e: React.FormEvent) => {
-    e.preventDefault();
-    await newsService.createNews({
-      ...newArticle,
-      slug: newArticle.title.toLowerCase().replace(/\s+/g, '-'),
-      status: 'published',
-    });
-    setShowAddNewsModal(false);
-    setNewArticle({
-      title: '',
-      category: 'Chamber Circular',
-      excerpt: '',
-      content: '',
-      author: 'Secretariat, ACCI Jabalpur',
-    });
+  const handleDeleteMember = async (id: string, name?: string) => {
+    if (confirm(`Are you sure you want to permanently delete "${name || 'this enterprise'}" from the Chamber Directory? This action cannot be undone.`)) {
+      await membersService.deleteMember(id);
+      loadAllData();
+    }
+  };
+
+  const handleDeleteJob = async (id: string, title?: string) => {
+    if (confirm(`Are you sure you want to delete the job vacancy "${title || 'this posting'}"?`)) {
+      await jobsService.deleteJob(id);
+      loadAllData();
+    }
+  };
+
+  const handleToggleJobStatus = async (id: string, currentStatus: string) => {
+    const newStatus = currentStatus === 'Active' ? 'Closed' : 'Active';
+    await jobsService.toggleJobStatus(id, newStatus as any);
     loadAllData();
   };
 
-  const handleDeleteNews = async (id: string) => {
-    if (confirm('Delete this circular?')) {
-      await newsService.deleteNews(id);
+  const handleDeleteInquiry = async (id: string) => {
+    if (confirm('Are you sure you want to delete this inquiry message from the inbox?')) {
+      await inquiriesService.deleteInquiry(id);
       loadAllData();
     }
   };
@@ -830,7 +816,6 @@ export default function AdminDashboard() {
             { id: 'accounts', label: `User Accounts (${usersList.length})`, icon: Users },
             { id: 'events', label: `Events (${events.length})`, icon: Calendar },
             { id: 'gallery', label: `Gallery (${albums.length})`, icon: Images },
-            { id: 'news', label: `Circulars (${news.length})`, icon: Newspaper },
             { id: 'jobs', label: `Jobs (${jobs.length})`, icon: Briefcase },
             { id: 'inquiries', label: `Inquiries (${inquiries.length})`, icon: Mail },
             { id: 'reviews', label: `Reviews (${reviews.length})`, icon: Star },
@@ -1056,7 +1041,7 @@ export default function AdminDashboard() {
                         </button>
                         {v.status !== 'approved' && (
                           <button
-                            onClick={() => handleVendorStatus(v.id, 'approved')}
+                            onClick={() => handleVendorStatus(v.$id || v.id, 'approved')}
                             className="rounded bg-emerald-600 px-2.5 py-1 text-[11px] font-bold text-white hover:bg-emerald-700 cursor-pointer"
                           >
                             Approve
@@ -1064,12 +1049,20 @@ export default function AdminDashboard() {
                         )}
                         {v.status !== 'rejected' && (
                           <button
-                            onClick={() => handleVendorStatus(v.id, 'rejected')}
-                            className="rounded bg-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-red-600 hover:text-white cursor-pointer"
+                            onClick={() => handleVendorStatus(v.$id || v.id, 'rejected')}
+                            className="rounded bg-slate-200 px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-amber-600 hover:text-white cursor-pointer"
                           >
                             Reject
                           </button>
                         )}
+                        <button
+                          onClick={() => handleDeleteMember(v.$id || v.id, v.businessName)}
+                          className="rounded bg-red-50 border border-red-200 px-2.5 py-1 text-[11px] font-bold text-red-700 hover:bg-red-600 hover:text-white cursor-pointer inline-flex items-center gap-1 transition-colors shadow-2xs"
+                          title="Permanently Delete Enterprise"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          <span>Delete</span>
+                        </button>
                       </td>
                     </tr>
                   ))}
@@ -1243,7 +1236,7 @@ export default function AdminDashboard() {
                   </div>
                   <div className="mt-4 pt-3 border-t border-slate-100 flex justify-end">
                     <button
-                      onClick={() => handleDeleteEvent(ev.id)}
+                      onClick={() => handleDeleteEvent(ev.$id || ev.id)}
                       className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-800 cursor-pointer"
                     >
                       <Trash2 className="h-3.5 w-3.5" />
@@ -1332,7 +1325,7 @@ export default function AdminDashboard() {
                         <span>View Photos ({album.photos?.length || album.photoCount || 1})</span>
                       </button>
                       <button
-                        onClick={() => handleDeleteAlbum(album.id)}
+                        onClick={() => handleDeleteAlbum(album.$id || album.id)}
                         className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-800 cursor-pointer"
                       >
                         <Trash2 className="h-3.5 w-3.5" />
@@ -1346,72 +1339,47 @@ export default function AdminDashboard() {
           </div>
         )}
 
-        {/* TAB 4: NEWS & CIRCULARS */}
-        {activeTab === 'news' && (
-          <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <div className="flex items-center justify-between pb-4 border-b border-slate-200 mb-6">
-              <div>
-                <h2 className="font-serif-heading text-lg font-bold text-[#07174a]">
-                  Chamber Trade Circulars & News
-                </h2>
-                <p className="text-xs text-slate-500">Publish taxation advisories, gazettes, and press releases.</p>
-              </div>
-              <button
-                onClick={() => setShowAddNewsModal(true)}
-                className="inline-flex items-center gap-1.5 rounded-lg bg-[#1540a8] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#07174a] cursor-pointer"
-              >
-                <PlusCircle className="h-4 w-4" />
-                <span>+ Publish Circular</span>
-              </button>
-            </div>
-
-            <div className="space-y-4">
-              {news.map((item) => (
-                <div key={item.id} className="rounded-xl border border-slate-200 p-5 flex items-start justify-between gap-4">
-                  <div>
-                    <span className="text-[10px] font-bold uppercase tracking-wider bg-amber-50 text-amber-800 px-2 py-0.5 rounded border border-amber-200">
-                      {item.category}
-                    </span>
-                    <h3 className="font-serif-heading text-base font-bold text-[#07174a] mt-1">
-                      {item.title}
-                    </h3>
-                    <p className="text-xs text-slate-500 mt-0.5">Published: {item.publishedAt} by {item.author}</p>
-                    <p className="text-xs text-slate-600 mt-2 line-clamp-2">{item.excerpt}</p>
-                  </div>
-                  <button
-                    onClick={() => handleDeleteNews(item.id)}
-                    className="inline-flex items-center gap-1 text-xs font-bold text-red-600 hover:text-red-800 shrink-0 cursor-pointer"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    <span>Delete</span>
-                  </button>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {/* TAB 5: JOBS MODERATION */}
+        {/* TAB: JOBS MODERATION */}
         {activeTab === 'jobs' && (
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
             <h2 className="font-serif-heading text-lg font-bold text-[#07174a] mb-1">
-              Community Job Postings
+              Community Job Postings ({jobs.length})
             </h2>
             <p className="text-xs text-slate-500 mb-6">Manage active employment vacancies across member firms.</p>
 
-            <div className="space-y-3">
-              {jobs.map((j) => (
-                <div key={j.id} className="rounded-xl border border-slate-200 p-4 text-xs flex items-center justify-between gap-4">
-                  <div>
-                    <h3 className="font-bold text-[#07174a] text-sm">{j.title}</h3>
-                    <span className="text-slate-500">{j.company} • 📍 {j.location} • 💰 {j.salary}</span>
+            {jobs.length === 0 ? (
+              <p className="text-xs text-slate-400 italic">No job postings recorded yet.</p>
+            ) : (
+              <div className="space-y-3">
+                {jobs.map((j) => (
+                  <div key={j.id} className="rounded-xl border border-slate-200 p-4 text-xs flex items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-bold text-[#07174a] text-sm">{j.title}</h3>
+                      <span className="text-slate-500">{j.company} • 📍 {j.location} • 💰 {j.salary}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => handleToggleJobStatus(j.$id || j.id, j.status)}
+                        className={`rounded px-2.5 py-1 font-bold border text-[11px] cursor-pointer ${
+                          j.status === 'Active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-600 border-slate-200'
+                        }`}
+                        title="Click to toggle Active / Closed status"
+                      >
+                        {j.status}
+                      </button>
+                      <button
+                        onClick={() => handleDeleteJob(j.$id || j.id, j.title)}
+                        className="rounded bg-red-50 border border-red-200 px-2.5 py-1 text-[11px] font-bold text-red-700 hover:bg-red-600 hover:text-white cursor-pointer inline-flex items-center gap-1 transition-colors"
+                        title="Delete Job Posting"
+                      >
+                        <Trash2 className="h-3 w-3" />
+                        <span>Delete</span>
+                      </button>
+                    </div>
                   </div>
-                  <span className="rounded bg-emerald-50 text-emerald-700 px-2 py-0.5 font-bold border border-emerald-200">
-                    {j.status}
-                  </span>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
         )}
 
@@ -1434,9 +1402,19 @@ export default function AdminDashboard() {
                         <strong className="text-[#07174a] text-sm">{inq.name}</strong>
                         <span className="text-slate-500 ml-2 font-mono">{inq.phone} • {inq.email}</span>
                       </div>
-                      <span className="text-[10px] uppercase font-bold text-slate-400">
-                        {new Date(inq.createdAt).toLocaleDateString()}
-                      </span>
+                      <div className="flex items-center gap-3">
+                        <span className="text-[10px] uppercase font-bold text-slate-400">
+                          {new Date(inq.createdAt).toLocaleDateString()}
+                        </span>
+                        <button
+                          onClick={() => handleDeleteInquiry(inq.$id || inq.id)}
+                          className="rounded bg-red-50 border border-red-200 px-2 py-1 text-[11px] font-bold text-red-700 hover:bg-red-600 hover:text-white cursor-pointer inline-flex items-center gap-1 transition-colors"
+                          title="Delete inquiry"
+                        >
+                          <Trash2 className="h-3 w-3" />
+                          <span>Delete</span>
+                        </button>
+                      </div>
                     </div>
                     <div className="font-bold text-slate-700 mb-1">Subject: {inq.subject}</div>
                     <p className="text-slate-600 whitespace-pre-wrap leading-relaxed">{inq.message}</p>
@@ -2537,75 +2515,6 @@ export default function AdminDashboard() {
         </div>
       )}
 
-      {/* Modal: Add News */}
-      {showAddNewsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-          <div className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-200">
-            <button
-              onClick={() => setShowAddNewsModal(false)}
-              className="absolute right-4 top-4 rounded-full p-2 text-slate-400 hover:bg-slate-100"
-            >
-              ✕
-            </button>
-            <h3 className="font-serif-heading text-xl font-bold text-[#07174a]">
-              Publish Chamber Circular
-            </h3>
-            <form onSubmit={handleCreateNews} className="mt-4 space-y-3 text-xs">
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Title *</label>
-                <input
-                  type="text"
-                  required
-                  value={newArticle.title}
-                  onChange={(e) => setNewArticle({ ...newArticle, title: e.target.value })}
-                  placeholder="e.g. Revised MSME Vendor Payment Guidelines"
-                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800"
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Category</label>
-                <select
-                  value={newArticle.category}
-                  onChange={(e) => setNewArticle({ ...newArticle, category: e.target.value })}
-                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800"
-                >
-                  <option value="Chamber Circular">Chamber Circular</option>
-                  <option value="Trade Advisory">Trade Advisory</option>
-                  <option value="Community Achievement">Community Achievement</option>
-                </select>
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Short Excerpt *</label>
-                <input
-                  type="text"
-                  required
-                  value={newArticle.excerpt}
-                  onChange={(e) => setNewArticle({ ...newArticle, excerpt: e.target.value })}
-                  placeholder="1-2 sentences summary…"
-                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800"
-                />
-              </div>
-              <div>
-                <label className="block font-semibold text-slate-700 mb-1">Full Content *</label>
-                <textarea
-                  required
-                  rows={5}
-                  value={newArticle.content}
-                  onChange={(e) => setNewArticle({ ...newArticle, content: e.target.value })}
-                  placeholder="Full circular text, guidelines, notifications…"
-                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800"
-                />
-              </div>
-              <button
-                type="submit"
-                className="w-full rounded-lg bg-[#1540a8] py-2.5 text-xs font-bold text-white hover:bg-[#07174a]"
-              >
-                Publish Official Circular
-              </button>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* Modal: Add Concluded Event Gallery Album */}
       {showAddAlbumModal && (

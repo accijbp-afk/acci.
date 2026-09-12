@@ -219,13 +219,29 @@ export const storiesService = {
   async deleteStory(id: string): Promise<boolean> {
     if (isAppwriteConfigured()) {
       try {
-        await databases.deleteDocument(
-          APPWRITE_CONFIG.databaseId,
-          APPWRITE_CONFIG.collections.stories,
-          id
-        );
-      } catch {
-        // Fallback to local
+        let docId = id;
+        try {
+          await databases.deleteDocument(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.stories,
+            docId
+          );
+        } catch {
+          const found = await databases.listDocuments(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.stories,
+            [Query.equal('id', id), Query.limit(1)]
+          );
+          if (found.documents.length > 0) {
+            await databases.deleteDocument(
+              APPWRITE_CONFIG.databaseId,
+              APPWRITE_CONFIG.collections.stories,
+              found.documents[0].$id
+            );
+          }
+        }
+      } catch (err) {
+        console.warn('Appwrite delete story error:', err);
       }
     }
 

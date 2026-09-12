@@ -81,13 +81,29 @@ export const eventsService = {
   async deleteEvent(id: string): Promise<boolean> {
     if (isAppwriteConfigured()) {
       try {
-        await databases.deleteDocument(
-          APPWRITE_CONFIG.databaseId,
-          APPWRITE_CONFIG.collections.events,
-          id
-        );
-      } catch {
-        // Continue
+        let docId = id;
+        try {
+          await databases.deleteDocument(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.events,
+            docId
+          );
+        } catch {
+          const found = await databases.listDocuments(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.events,
+            [Query.equal('id', id), Query.limit(1)]
+          );
+          if (found.documents.length > 0) {
+            await databases.deleteDocument(
+              APPWRITE_CONFIG.databaseId,
+              APPWRITE_CONFIG.collections.events,
+              found.documents[0].$id
+            );
+          }
+        }
+      } catch (err) {
+        console.warn('Appwrite deleteEvent error:', err);
       }
     }
 
