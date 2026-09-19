@@ -26,7 +26,7 @@ export const Footer: React.FC = () => {
           </div>
           <div className="flex flex-wrap items-center gap-3">
             <Link
-              href="/membership"
+              href="/register"
               className="inline-flex items-center gap-2 rounded-md bg-amber-400 px-6 py-2.5 text-xs sm:text-sm font-bold text-[#07174a] hover:bg-amber-300 transition-all shadow-md"
             >
               <span>{t('Become a member')}</span>

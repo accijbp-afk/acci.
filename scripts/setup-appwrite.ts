@@ -100,6 +100,42 @@ async function main() {
         .catch((e) => console.log(`   ℹ Collection ${col.id}: ${e.message}`));
     }
 
+    // 2b. Ensure Events Collection Attributes
+    console.log('\n2b. Ensuring Events Collection Attributes...');
+    const eventAttributes = [
+      { key: 'title', size: 255, required: true },
+      { key: 'id', size: 100, required: false },
+      { key: 'slug', size: 255, required: true },
+      { key: 'category', size: 100, required: true },
+      { key: 'date', size: 50, required: true },
+      { key: 'time', size: 50, required: true },
+      { key: 'venue', size: 255, required: true },
+      { key: 'description', size: 5000, required: true },
+      { key: 'imageUrl', size: 1000000, required: false },
+      { key: 'bgColor', size: 100, required: false },
+      { key: 'registrationUrl', size: 1000, required: false },
+      { key: 'status', size: 50, required: true },
+      { key: 'createdAt', size: 50, required: true },
+    ];
+
+    for (const attr of eventAttributes) {
+      await request(`/databases/${DATABASE_ID}/collections/events/attributes/string`, 'POST', {
+        key: attr.key,
+        size: attr.size,
+        required: attr.required,
+      }).then(() => console.log(`   ✓ Created attribute: events.${attr.key}`))
+        .catch(async () => {
+          // If exists and it's imageUrl, ensure size is 1,000,000
+          if (attr.key === 'imageUrl') {
+            await request(`/databases/${DATABASE_ID}/collections/events/attributes/string/imageUrl`, 'PATCH', {
+              size: 1000000,
+              required: false,
+            }).then(() => console.log(`   ✓ Updated events.imageUrl size to 1,000,000`))
+              .catch(() => {});
+          }
+        });
+    }
+
     // 3. Create Storage Bucket
     console.log('\n3. Creating Media Storage Bucket...');
     const bucketId = process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID || 'acci_media';

@@ -151,6 +151,7 @@ export default function GalleryPage() {
                           src={album.coverUrl}
                           alt={album.title}
                           fill
+                          unoptimized
                           className="object-cover transition-transform duration-500 group-hover:scale-105"
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-transparent to-transparent opacity-80 group-hover:opacity-90 transition-opacity" />
@@ -171,7 +172,7 @@ export default function GalleryPage() {
                                 key={i}
                                 className="relative h-12 w-16 shrink-0 rounded-lg overflow-hidden border border-white/60 shadow-sm"
                               >
-                                <Image src={imgUrl} alt={`Thumbnail ${i + 1}`} fill className="object-cover" />
+                                <Image src={imgUrl} alt={`Thumbnail ${i + 1}`} fill unoptimized className="object-cover" />
                               </div>
                             ))}
                             {allPhotos.length > 4 && (
@@ -237,6 +238,7 @@ export default function GalleryPage() {
                       src={activeAlbum.photos![selectedPhotoIndex]}
                       alt={`${activeAlbum.title} Photo ${selectedPhotoIndex + 1}`}
                       fill
+                      unoptimized
                       className="object-contain"
                     />
 
@@ -282,6 +284,7 @@ export default function GalleryPage() {
                           src={photoUrl}
                           alt={`${activeAlbum.title} - Photo ${idx + 1}`}
                           fill
+                          unoptimized
                           className="object-cover group-hover:scale-110 transition-transform duration-300"
                         />
                         <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">

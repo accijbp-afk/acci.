@@ -1,15 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { authService } from '@/services/appwrite/auth';
 import { notificationService } from '@/services/notifications';
 import { User, Mail, Lock, Phone, MapPin, ArrowRight, AlertCircle, ExternalLink } from 'lucide-react';
 
-export default function RegisterPage() {
+function RegisterForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get('redirect') || '/dashboard';
+
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -61,7 +64,7 @@ export default function RegisterPage() {
         actionUrl: '/dashboard',
       });
 
-      router.push('/dashboard');
+      router.push(redirectUrl);
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Registration failed. Please try again.');
     } finally {
@@ -81,13 +84,22 @@ export default function RegisterPage() {
               className="object-contain"
             />
           </div>
-          <h1 className="font-serif-heading text-2xl font-bold text-[#07174a] mt-3">
-            Create Chamber Account
+          <span className="inline-block px-3 py-1 rounded-full bg-amber-50 border border-amber-200 text-amber-800 text-[10px] font-bold uppercase tracking-wider mt-3 mb-1">
+            Official Chamber Membership
+          </span>
+          <h1 className="font-serif-heading text-2xl font-bold text-[#07174a]">
+            Become an ACCI Member
           </h1>
           <p className="text-xs text-slate-500 mt-1">
-            Join the ACCI digital network to manage your business listing and vacancies.
+            Create your personal Chamber account to access the network, list business enterprises, and post opportunities.
           </p>
         </div>
+
+        {redirectUrl.includes('membership') && (
+          <div className="rounded-xl bg-blue-50 border border-blue-200 p-3 text-blue-900 text-xs mb-4 text-center">
+            <span className="font-semibold">Step 1 of 2:</span> Create your member account to proceed to enterprise registration.
+          </div>
+        )}
 
         {error && (
           <div className="rounded-xl bg-red-50 border border-red-200 p-3.5 text-red-700 text-xs mb-4">
@@ -107,8 +119,8 @@ export default function RegisterPage() {
                         rel="noopener noreferrer"
                         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-700 text-white font-medium hover:bg-red-800 transition-colors shadow-sm"
                       >
-                        Open Appwrite Console to Restore
-                        <ExternalLink className="h-3 w-3" />
+                        <span>Restore Project in Console</span>
+                        <ExternalLink className="h-3.5 w-3.5" />
                       </a>
                     </div>
                   </div>
@@ -118,9 +130,9 @@ export default function RegisterPage() {
           </div>
         )}
 
-        <form onSubmit={handleRegister} className="space-y-3.5 text-xs">
+        <form onSubmit={handleRegister} className="space-y-4 text-xs">
           <div>
-            <label className="block font-semibold text-slate-700 mb-1">Your Full Name *</label>
+            <label className="block font-semibold text-slate-700 mb-1">Full Name *</label>
             <div className="relative">
               <User className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
               <input
@@ -128,8 +140,8 @@ export default function RegisterPage() {
                 required
                 value={name}
                 onChange={(e) => setName(e.target.value)}
-                placeholder="e.g. Sudhi Agrawal"
-                className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                placeholder="e.g. Ramesh Chandra Agrawal"
+                className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#1540a8]"
               />
             </div>
           </div>
@@ -143,39 +155,9 @@ export default function RegisterPage() {
                 required
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
-                placeholder="name@enterprise.com"
-                className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                placeholder="name@company.com"
+                className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#1540a8]"
               />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-3">
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">Mobile Phone *</label>
-              <div className="relative">
-                <Phone className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                <input
-                  type="tel"
-                  required
-                  value={phone}
-                  onChange={(e) => setPhone(e.target.value)}
-                  placeholder="9876543210"
-                  className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs text-slate-800 focus:outline-none focus:border-[#1540a8]"
-                />
-              </div>
-            </div>
-            <div>
-              <label className="block font-semibold text-slate-700 mb-1">City / Area</label>
-              <div className="relative">
-                <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
-                <input
-                  type="text"
-                  value={city}
-                  onChange={(e) => setCity(e.target.value)}
-                  placeholder="Jabalpur"
-                  className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs text-slate-800 focus:outline-none focus:border-[#1540a8]"
-                />
-              </div>
             </div>
           </div>
 
@@ -186,33 +168,81 @@ export default function RegisterPage() {
               <input
                 type="password"
                 required
-                minLength={6}
+                minLength={8}
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
-                placeholder="Min. 6 characters"
-                className="w-full rounded-lg border border-slate-300 py-2 pl-9 pr-3 text-xs text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                placeholder="Minimum 8 characters"
+                className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#1540a8]"
               />
+            </div>
+          </div>
+
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">Phone *</label>
+              <div className="relative">
+                <Phone className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <input
+                  type="tel"
+                  required
+                  value={phone}
+                  onChange={(e) => setPhone(e.target.value)}
+                  placeholder="+91 94251..."
+                  className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                />
+              </div>
+            </div>
+            <div>
+              <label className="block font-semibold text-slate-700 mb-1">City</label>
+              <div className="relative">
+                <MapPin className="absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={city}
+                  onChange={(e) => setCity(e.target.value)}
+                  placeholder="Jabalpur"
+                  className="w-full rounded-lg border border-slate-300 pl-9 pr-3 py-2 text-xs text-slate-800 focus:outline-none focus:border-[#1540a8]"
+                />
+              </div>
             </div>
           </div>
 
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-[#1540a8] hover:bg-[#07174a] text-white py-3 text-xs font-bold tracking-wide shadow-md transition-all cursor-pointer disabled:opacity-50 mt-2"
+            className="w-full rounded-xl bg-[#1540a8] hover:bg-[#07174a] text-white py-3 text-xs font-bold tracking-wide shadow-md transition-all cursor-pointer disabled:opacity-50 mt-2 flex items-center justify-center gap-2"
           >
-            {loading ? 'Creating Account…' : 'Register Account'}
+            {loading ? (
+              <span>Creating Member Account…</span>
+            ) : (
+              <>
+                <span>Become a Member • Complete Registration</span>
+                <ArrowRight className="h-4 w-4" />
+              </>
+            )}
           </button>
         </form>
 
         <div className="mt-6 pt-4 border-t border-slate-100 text-center">
           <p className="text-xs text-slate-500">
             Already have an account?{' '}
-            <Link href="/login" className="text-blue-700 font-bold hover:underline">
+            <Link
+              href={redirectUrl ? `/login?redirect=${encodeURIComponent(redirectUrl)}` : '/login'}
+              className="text-blue-700 font-bold hover:underline"
+            >
               Sign in here
             </Link>
           </p>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function RegisterPage() {
+  return (
+    <Suspense fallback={<div className="py-20 text-center text-xs text-slate-500">Loading registration…</div>}>
+      <RegisterForm />
+    </Suspense>
   );
 }

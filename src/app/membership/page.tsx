@@ -7,12 +7,14 @@ import { membersService } from '@/services/appwrite/members';
 import { notificationService } from '@/services/notifications';
 import { SEED_CATEGORIES, SEED_INDUSTRIES } from '@/services/seedData';
 import { UserProfile } from '@/types';
+import { ShieldCheck, UserPlus, LogIn, ArrowRight, CheckCircle2, Building2 } from 'lucide-react';
 
 export default function MembershipPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
+  const [checkingAuth, setCheckingAuth] = useState(true);
 
   const [form, setForm] = useState({
     businessName: '',
@@ -41,18 +43,24 @@ export default function MembershipPage() {
   });
 
   useEffect(() => {
-    authService.getCurrentUser().then((u) => {
-      if (u) {
-        setCurrentUser(u);
-        setForm((prev) => ({
-          ...prev,
-          ownerName: prev.ownerName || u.name,
-          email: prev.email || u.email,
-          phone: prev.phone || u.phone || '',
-          city: prev.city || u.city || 'Jabalpur',
-        }));
-      }
-    });
+    authService
+      .getCurrentUser()
+      .then((u) => {
+        if (u) {
+          setCurrentUser(u);
+          setForm((prev) => ({
+            ...prev,
+            ownerName: prev.ownerName || u.name,
+            email: prev.email || u.email,
+            phone: prev.phone || u.phone || '',
+            city: prev.city || u.city || 'Jabalpur',
+          }));
+        }
+        setCheckingAuth(false);
+      })
+      .catch(() => {
+        setCheckingAuth(false);
+      });
   }, []);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -145,56 +153,180 @@ export default function MembershipPage() {
       <section className="bg-[#07174a] text-white py-14 border-b-4 border-amber-400">
         <div className="mx-auto max-w-7xl px-4 sm:px-6">
           <span className="text-xs font-bold uppercase tracking-widest text-amber-400">
-            100% Free of Cost Community Portal
+            Exclusive ACCI Member Service
           </span>
           <h1 className="font-serif-heading text-3xl sm:text-5xl font-bold text-white mt-1">
-            Become a Member
+            List Your Business Enterprise
           </h1>
           <p className="mt-3 text-xs sm:text-sm text-slate-300 max-w-2xl leading-relaxed">
-            Register your enterprise with the Agrawal Chamber of Commerce &amp; Industries (ACCI) Jabalpur. Get verified, access commercial networks, and list your business for free.
+            Register your enterprise in the official Agrawal Chamber of Commerce &amp; Industries (ACCI) Directory. Connect with verified traders, access commercial contracts, and grow across Jabalpur and Mahakaushal.
           </p>
         </div>
       </section>
 
-      {/* Application Form */}
-      <section id="application-form" className="py-14">
-        <div className="mx-auto max-w-3xl px-4 sm:px-6">
-          <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-xl">
-            <div className="border-b border-slate-200 pb-4 mb-6">
-              <span className="text-[10px] font-bold uppercase tracking-widest text-[#1540a8]">
-                Official Enrolment Form • 100% Free
-              </span>
-              <h2 className="font-serif-heading text-2xl font-bold text-[#07174a] mt-0.5">
-                Register Your Business with ACCI
-              </h2>
-              <p className="text-xs text-slate-500 mt-1">
-                Completely free of cost for all Agrawal community business owners • Takes less than 5 minutes.
-              </p>
-            </div>
-
-            {submittedId ? (
-              <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-8 text-center animate-in fade-in">
-                <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-2xl mb-4">
-                  ✓
+      {/* Main Content Area */}
+      {checkingAuth ? (
+        <section className="py-20">
+          <div className="mx-auto max-w-md px-4 text-center">
+            <div className="inline-block h-9 w-9 animate-spin rounded-full border-4 border-[#1540a8] border-r-transparent mb-4" />
+            <p className="text-sm font-semibold text-slate-700">Verifying ACCI member authorization…</p>
+            <p className="text-xs text-slate-400 mt-1">Checking member credentials and permissions</p>
+          </div>
+        </section>
+      ) : !currentUser ? (
+        <section className="py-14">
+          <div className="mx-auto max-w-2xl px-4 sm:px-6">
+            <div className="rounded-3xl border border-amber-400/30 bg-white shadow-2xl overflow-hidden">
+              {/* Top Navy Banner */}
+              <div className="bg-gradient-to-r from-[#07174a] to-[#1540a8] px-6 sm:px-8 py-8 text-white relative">
+                <div className="inline-flex items-center gap-2 rounded-full bg-amber-400/20 border border-amber-400/40 px-3 py-1 text-[11px] font-bold text-amber-300 uppercase tracking-wider mb-3">
+                  <ShieldCheck className="h-3.5 w-3.5 text-amber-400" />
+                  <span>Member Verification Required</span>
                 </div>
-                <h3 className="font-serif-heading text-xl font-bold text-emerald-900">
-                  Enrolment Application Submitted!
-                </h3>
-                <p className="text-xs text-emerald-800 mt-2 max-w-md mx-auto leading-relaxed">
-                  Your enterprise details have been recorded under Application Reference ID{' '}
-                  <strong className="font-mono">{submittedId}</strong>. Our team in Jabalpur will verify details and approve your listing within 24–48 hours.
+                <h2 className="font-serif-heading text-2xl sm:text-3xl font-bold text-white leading-tight">
+                  Become a Member to List Your Business
+                </h2>
+                <p className="text-xs sm:text-sm text-slate-200 mt-2 leading-relaxed">
+                  Directory listings are exclusively reserved for registered members of the Agrawal Chamber of Commerce &amp; Industries.
                 </p>
-                <div className="mt-6 flex justify-center gap-3">
+              </div>
+
+              {/* Explanatory Body & Steps */}
+              <div className="p-6 sm:p-8 space-y-6">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-amber-400 text-[#07174a] font-bold text-xs mb-3">
+                      1
+                    </div>
+                    <h4 className="font-bold text-[#07174a] text-xs">Become a Member</h4>
+                    <p className="text-[11px] text-slate-500 mt-1 leading-normal">
+                      Create your free personal member account in under a minute.
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-blue-100 text-[#1540a8] font-bold text-xs mb-3">
+                      2
+                    </div>
+                    <h4 className="font-bold text-[#07174a] text-xs">Log In to Portal</h4>
+                    <p className="text-[11px] text-slate-500 mt-1 leading-normal">
+                      Authenticate securely with your email and member password.
+                    </p>
+                  </div>
+
+                  <div className="rounded-xl border border-slate-200 bg-slate-50/60 p-4">
+                    <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-emerald-100 text-emerald-800 font-bold text-xs mb-3">
+                      3
+                    </div>
+                    <h4 className="font-bold text-[#07174a] text-xs">List &amp; Verify</h4>
+                    <p className="text-[11px] text-slate-500 mt-1 leading-normal">
+                      Register company details to get verified in the Jabalpur directory.
+                    </p>
+                  </div>
+                </div>
+
+                {/* Action Buttons */}
+                <div className="pt-2 flex flex-col sm:flex-row gap-3">
+                  <Link
+                    href="/register?redirect=/membership"
+                    className="flex-1 flex items-center justify-center gap-2 rounded-xl bg-gradient-to-r from-amber-400 to-amber-500 hover:from-amber-300 hover:to-amber-400 px-5 py-3.5 text-xs font-bold text-[#07174a] shadow-md transition-all hover:-translate-y-0.5"
+                  >
+                    <UserPlus className="h-4 w-4" />
+                    <span>Become a Member (Create Free Account)</span>
+                    <ArrowRight className="h-4 w-4" />
+                  </Link>
+                  <Link
+                    href="/login?redirect=/membership"
+                    className="flex items-center justify-center gap-2 rounded-xl border border-slate-300 hover:bg-slate-50 px-5 py-3.5 text-xs font-semibold text-slate-700 transition-all"
+                  >
+                    <LogIn className="h-4 w-4 text-[#1540a8]" />
+                    <span>Already a Member? Log In</span>
+                  </Link>
+                </div>
+
+                <div className="text-center pt-2 border-t border-slate-100">
                   <Link
                     href="/directory"
-                    className="inline-block rounded-lg bg-[#07174a] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#1540a8]"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-[#1540a8] hover:text-[#07174a]"
                   >
-                    View Directory
+                    <Building2 className="h-3.5 w-3.5" />
+                    <span>Browse registered businesses in directory first</span>
+                    <ArrowRight className="h-3 w-3" />
                   </Link>
                 </div>
               </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-6 text-xs">
+            </div>
+          </div>
+        </section>
+      ) : (
+        /* Application Form for Logged-in Members */
+        <section id="application-form" className="py-14">
+          <div className="mx-auto max-w-3xl px-4 sm:px-6">
+            <div className="rounded-2xl border border-slate-200 bg-white p-8 shadow-xl">
+              {/* Member Confirmation Banner */}
+              <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-4 mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 shrink-0">
+                    <CheckCircle2 className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <div className="text-xs font-bold text-emerald-950">
+                      Logged in as: {currentUser.name}
+                    </div>
+                    <div className="text-[11px] text-emerald-700">
+                      {currentUser.email} • Verified ACCI Member Account
+                    </div>
+                  </div>
+                </div>
+                <Link
+                  href="/dashboard"
+                  className="text-xs font-bold text-emerald-800 hover:text-emerald-950 underline self-start sm:self-auto"
+                >
+                  Go to Dashboard →
+                </Link>
+              </div>
+
+              <div className="border-b border-slate-200 pb-4 mb-6">
+                <span className="text-[10px] font-bold uppercase tracking-widest text-[#1540a8]">
+                  Official Enrolment Form • Free Member Benefit
+                </span>
+                <h2 className="font-serif-heading text-2xl font-bold text-[#07174a] mt-0.5">
+                  Register Your Business with ACCI
+                </h2>
+                <p className="text-xs text-slate-500 mt-1">
+                  Completely free of cost for all Agrawal community business owners • Takes less than 5 minutes.
+                </p>
+              </div>
+
+              {submittedId ? (
+                <div className="rounded-xl bg-emerald-50 border border-emerald-200 p-8 text-center animate-in fade-in">
+                  <div className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-emerald-100 text-emerald-700 text-2xl mb-4">
+                    ✓
+                  </div>
+                  <h3 className="font-serif-heading text-xl font-bold text-emerald-900">
+                    Enrolment Application Submitted!
+                  </h3>
+                  <p className="text-xs text-emerald-800 mt-2 max-w-md mx-auto leading-relaxed">
+                    Your enterprise details have been recorded under Application Reference ID{' '}
+                    <strong className="font-mono">{submittedId}</strong>. Our team in Jabalpur will verify details and approve your listing within 24–48 hours.
+                  </p>
+                  <div className="mt-6 flex flex-wrap justify-center gap-3">
+                    <Link
+                      href="/dashboard"
+                      className="inline-block rounded-lg bg-[#07174a] px-5 py-2.5 text-xs font-bold text-white hover:bg-[#1540a8]"
+                    >
+                      View in My Dashboard
+                    </Link>
+                    <Link
+                      href="/directory"
+                      className="inline-block rounded-lg border border-slate-300 bg-white px-5 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                    >
+                      Browse Directory
+                    </Link>
+                  </div>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-6 text-xs">
                 {errorMsg && (
                   <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-red-700 font-semibold">
                     {errorMsg}
@@ -452,6 +584,7 @@ export default function MembershipPage() {
           </div>
         </div>
       </section>
+      )}
     </div>
   );
 }

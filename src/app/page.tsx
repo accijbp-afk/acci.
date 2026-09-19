@@ -149,7 +149,7 @@ export default function HomePage() {
               <ChevronRight className="h-4 w-4" />
             </Link>
             <Link
-              href="/membership"
+              href="/register"
               className="inline-flex items-center gap-2 rounded-lg border border-white/30 bg-white/10 hover:bg-white/15 text-white px-6 py-3 text-xs sm:text-sm font-semibold backdrop-blur transition-all"
             >
               <span>+ Become a Member</span>
@@ -651,7 +651,7 @@ export default function HomePage() {
 
           <div className="mt-10">
             <Link
-              href="/membership"
+              href="/register"
               className="inline-flex items-center gap-2 rounded-lg bg-amber-400 px-8 py-3.5 text-xs sm:text-sm font-bold text-[#07174a] shadow-xl hover:bg-amber-300 transition-all hover:scale-105"
             >
               <span>Become a Member Now — Free</span>

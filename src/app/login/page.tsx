@@ -1,14 +1,17 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 import { authService } from '@/services/appwrite/auth';
 import { Lock, Mail, ArrowRight, ShieldCheck, User, AlertCircle, ExternalLink } from 'lucide-react';
 
-export default function LoginPage() {
+function LoginForm() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const redirectUrl = searchParams.get('redirect');
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
@@ -21,10 +24,10 @@ export default function LoginPage() {
 
     try {
       const user = await authService.login(email, password);
-      if (user.role === 'admin') {
+      if (user.role === 'admin' && !redirectUrl) {
         router.push('/admin');
       } else {
-        router.push('/dashboard');
+        router.push(redirectUrl || '/dashboard');
       }
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : 'Invalid credentials. Please try again.');
@@ -52,6 +55,12 @@ export default function LoginPage() {
             Access your Chamber business profile, job postings, and credentials.
           </p>
         </div>
+
+        {redirectUrl && (
+          <div className="rounded-xl bg-blue-50 border border-blue-200 p-3 text-blue-900 text-xs mb-4 text-center">
+            <span>Log in to your member account to proceed to enterprise listing.</span>
+          </div>
+        )}
 
         {error && (
           <div className="rounded-xl bg-red-50 border border-red-200 p-3.5 text-red-700 text-xs mb-4">
@@ -130,12 +139,23 @@ export default function LoginPage() {
         <div className="mt-6 pt-4 border-t border-slate-100 text-center">
           <p className="text-xs text-slate-500">
             Don&apos;t have an account yet?{' '}
-            <Link href="/register" className="text-blue-700 font-bold hover:underline">
-              Create an account
+            <Link
+              href={redirectUrl ? `/register?redirect=${encodeURIComponent(redirectUrl)}` : '/register'}
+              className="text-blue-700 font-bold hover:underline"
+            >
+              Become a Member (Free)
             </Link>
           </p>
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<div className="py-20 text-center text-xs text-slate-500">Loading sign in…</div>}>
+      <LoginForm />
+    </Suspense>
   );
 }

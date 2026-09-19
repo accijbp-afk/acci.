@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation';
 import { authService } from '@/services/appwrite/auth';
 import { membersService } from '@/services/appwrite/members';
 import { eventsService } from '@/services/appwrite/events';
+import { storageService } from '@/services/appwrite/storage';
 import { galleryService } from '@/services/appwrite/gallery';
 import { jobsService } from '@/services/appwrite/jobs';
 import { inquiriesService } from '@/services/appwrite/inquiries';
@@ -51,6 +52,7 @@ import {
   AlertCircle,
   Key,
   Settings,
+  UploadCloud,
 } from 'lucide-react';
 import { legalService } from '@/services/appwrite/legal';
 import { notificationService } from '@/services/notifications';
@@ -145,10 +147,23 @@ export default function AdminDashboard() {
     description: '',
     imageUrl: '',
   });
+  const [eventImageFile, setEventImageFile] = useState<File | null>(null);
   const [eventImageError, setEventImageError] = useState<string | null>(null);
+  const [savingEvent, setSavingEvent] = useState(false);
+  const [eventSubmitError, setEventSubmitError] = useState<string | null>(null);
+  const [eventSuccessMessage, setEventSuccessMessage] = useState<string | null>(null);
 
-  // Gallery Album Form State
+  // Gallery Album Form State & Direct File Uploads
   const [showAddAlbumModal, setShowAddAlbumModal] = useState(false);
+  const [albumCoverFile, setAlbumCoverFile] = useState<File | null>(null);
+  const [albumCoverPreview, setAlbumCoverPreview] = useState<string | null>(null);
+  const [albumPhotoFiles, setAlbumPhotoFiles] = useState<File[]>([]);
+  const [albumPhotoPreviews, setAlbumPhotoPreviews] = useState<string[]>([]);
+  const [savingAlbum, setSavingAlbum] = useState(false);
+  const [albumError, setAlbumError] = useState<string | null>(null);
+  const [albumUploadStatus, setAlbumUploadStatus] = useState<string | null>(null);
+  const [showCoverUrlInput, setShowCoverUrlInput] = useState(false);
+  const [showPhotoUrlInput, setShowPhotoUrlInput] = useState(false);
   const [newAlbum, setNewAlbum] = useState({
     title: '',
     category: 'Trade Summit',
@@ -366,11 +381,11 @@ export default function AdminDashboard() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    // Strict minimum size: max 500 KB (500 * 1024 bytes)
-    const MAX_SIZE_BYTES = 500 * 1024;
+    // Up to 10 MB allowed
+    const MAX_SIZE_BYTES = 10 * 1024 * 1024;
     if (file.size > MAX_SIZE_BYTES) {
       setEventImageError(
-        `File size (${(file.size / 1024).toFixed(0)} KB) exceeds the 500 KB limit. Recommended dimensions: 1200 × 675 px (16:9 Landscape). Please compress the image.`
+        `File size (${(file.size / (1024 * 1024)).toFixed(1)} MB) exceeds the 10 MB limit. Please select a smaller photo.`
       );
       e.target.value = '';
       return;
@@ -383,19 +398,20 @@ export default function AdminDashboard() {
       img.onload = () => {
         const w = img.naturalWidth;
         const h = img.naturalHeight;
-        if (h > w) {
+        if (h > w * 1.25) {
           setEventImageError(
             `Portrait image (${w} × ${h} px) not recommended. Event flyers and covers must be horizontal / landscape with recommended dimensions of 1200 × 675 px.`
           );
           return;
         }
-        if (w < 600 || h < 250) {
+        if (w < 400 || h < 200) {
           setEventImageError(
-            `Image resolution (${w} × ${h} px) is too low. Required dimensions: 1200 × 675 px (minimum 600 × 250 px, landscape).`
+            `Image resolution (${w} × ${h} px) is too low. Required dimensions: 1200 × 675 px (minimum 400 × 200 px, landscape).`
           );
           return;
         }
         setEventImageError(null);
+        setEventImageFile(file);
         setNewEvent((prev) => ({ ...prev, imageUrl: result }));
       };
       img.onerror = () => {
@@ -408,22 +424,59 @@ export default function AdminDashboard() {
 
   const handleCreateEvent = async (e: React.FormEvent) => {
     e.preventDefault();
-    await eventsService.createEvent({
-      ...newEvent,
-      slug: newEvent.title.toLowerCase().replace(/\s+/g, '-'),
-    });
-    setShowAddEventModal(false);
-    setNewEvent({
-      title: '',
-      category: 'Business Networking',
-      date: '2026-11-15',
-      time: '04:00 PM',
-      venue: 'Hotel Satkar, Jabalpur',
-      description: '',
-      imageUrl: '',
-    });
-    setEventImageError(null);
-    loadAllData();
+    setSavingEvent(true);
+    setEventSubmitError(null);
+
+    try {
+      let finalImageUrl = newEvent.imageUrl;
+
+      // If an image file was selected from disk, upload to Appwrite media storage bucket
+      if (eventImageFile) {
+        try {
+          const uploadedUrl = await storageService.uploadFile(eventImageFile);
+          if (uploadedUrl) {
+            finalImageUrl = uploadedUrl;
+          }
+        } catch (uploadErr) {
+          console.warn('Media storage upload notice, falling back to data URL:', uploadErr);
+        }
+      }
+
+      // Generate clean slug
+      const cleanSlug =
+        newEvent.title
+          .toLowerCase()
+          .trim()
+          .replace(/[^a-z0-9]+/g, '-')
+          .replace(/^-|-$/g, '') || `event-${Date.now()}`;
+
+      await eventsService.createEvent({
+        ...newEvent,
+        imageUrl: finalImageUrl,
+        slug: cleanSlug,
+      });
+
+      setShowAddEventModal(false);
+      setNewEvent({
+        title: '',
+        category: 'Business Networking',
+        date: '2026-11-15',
+        time: '04:00 PM',
+        venue: 'Hotel Satkar, Jabalpur',
+        description: '',
+        imageUrl: '',
+      });
+      setEventImageFile(null);
+      setEventImageError(null);
+      setEventSuccessMessage('Event published successfully!');
+      setTimeout(() => setEventSuccessMessage(null), 4000);
+      await loadAllData();
+    } catch (err: any) {
+      console.error('Failed to create event:', err);
+      setEventSubmitError(err?.message || 'Failed to publish event. Please verify your details and try again.');
+    } finally {
+      setSavingEvent(false);
+    }
   };
 
   const handleDeleteEvent = async (id: string) => {
@@ -433,26 +486,94 @@ export default function AdminDashboard() {
     }
   };
 
-  const handleCreateAlbum = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const photos = newAlbum.photosText
-      ? newAlbum.photosText
-          .split(/[\n,]+/)
-          .map((s) => s.trim())
-          .filter(Boolean)
-      : [newAlbum.coverUrl];
+  // Image restrictions for Gallery Albums
+  const MAX_IMAGE_FILE_SIZE = 5 * 1024 * 1024; // 5 MB per photo
+  const MAX_ALBUM_PHOTOS_LIMIT = 15; // Up to 15 photos
 
-    await galleryService.createAlbum({
-      title: newAlbum.title,
-      category: newAlbum.category,
-      date: newAlbum.date || '2026',
-      venue: newAlbum.venue,
-      coverUrl: newAlbum.coverUrl,
-      description: newAlbum.description,
-      photos: photos.length > 0 ? photos : [newAlbum.coverUrl],
+  const handleAlbumCoverChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAlbumError(null);
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (file.size > MAX_IMAGE_FILE_SIZE) {
+      setAlbumError(`Cover image "${file.name}" exceeds maximum allowed size of 5 MB (${(file.size / (1024 * 1024)).toFixed(1)} MB).`);
+      e.target.value = '';
+      return;
+    }
+
+    setAlbumCoverFile(file);
+    const reader = new FileReader();
+    reader.onload = () => {
+      setAlbumCoverPreview(reader.result as string);
+    };
+    reader.readAsDataURL(file);
+  };
+
+  const handleRemoveAlbumCover = () => {
+    setAlbumCoverFile(null);
+    setAlbumCoverPreview(null);
+    setNewAlbum((prev) => ({ ...prev, coverUrl: '' }));
+  };
+
+  const handleAlbumPhotosChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setAlbumError(null);
+    const files = Array.from(e.target.files || []);
+    if (files.length === 0) return;
+
+    const remainingSlots = MAX_ALBUM_PHOTOS_LIMIT - albumPhotoFiles.length;
+    if (remainingSlots <= 0) {
+      setAlbumError(`Maximum limit of ${MAX_ALBUM_PHOTOS_LIMIT} photos reached for this album.`);
+      e.target.value = '';
+      return;
+    }
+
+    const filesToConsider = files.slice(0, remainingSlots);
+    if (files.length > remainingSlots) {
+      setAlbumError(`Only ${remainingSlots} more photo(s) could be added (max ${MAX_ALBUM_PHOTOS_LIMIT} photos limit).`);
+    }
+
+    const validFiles: File[] = [];
+    for (const f of filesToConsider) {
+      if (f.size > MAX_IMAGE_FILE_SIZE) {
+        setAlbumError(`"${f.name}" exceeds 5 MB (${(f.size / (1024 * 1024)).toFixed(1)} MB) and was skipped.`);
+      } else {
+        validFiles.push(f);
+      }
+    }
+
+    if (validFiles.length === 0) {
+      e.target.value = '';
+      return;
+    }
+
+    setAlbumPhotoFiles((prev) => [...prev, ...validFiles]);
+
+    validFiles.forEach((file) => {
+      const reader = new FileReader();
+      reader.onload = () => {
+        setAlbumPhotoPreviews((prev) => [...prev, reader.result as string]);
+      };
+      reader.readAsDataURL(file);
     });
 
+    e.target.value = '';
+  };
+
+  const handleRemoveAlbumPhoto = (index: number) => {
+    setAlbumPhotoFiles((prev) => prev.filter((_, i) => i !== index));
+    setAlbumPhotoPreviews((prev) => prev.filter((_, i) => i !== index));
+  };
+
+  const resetAlbumForm = () => {
     setShowAddAlbumModal(false);
+    setAlbumCoverFile(null);
+    setAlbumCoverPreview(null);
+    setAlbumPhotoFiles([]);
+    setAlbumPhotoPreviews([]);
+    setAlbumError(null);
+    setAlbumUploadStatus(null);
+    setShowCoverUrlInput(false);
+    setShowPhotoUrlInput(false);
     setNewAlbum({
       title: '',
       category: 'Trade Summit',
@@ -462,7 +583,84 @@ export default function AdminDashboard() {
       description: '',
       photosText: '',
     });
-    loadAllData();
+  };
+
+  const handleCreateAlbum = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setAlbumError(null);
+
+    const hasCover = !!albumCoverFile || !!newAlbum.coverUrl.trim();
+    if (!hasCover) {
+      setAlbumError('Please upload a cover image or enter a cover image URL.');
+      return;
+    }
+
+    setSavingAlbum(true);
+
+    try {
+      // 1. Upload Cover Image to Appwrite Storage (or data URL fallback)
+      let finalCoverUrl = newAlbum.coverUrl.trim();
+      if (albumCoverFile) {
+        setAlbumUploadStatus('Uploading cover photo to storage…');
+        try {
+          finalCoverUrl = await storageService.uploadFile(albumCoverFile);
+        } catch (covErr) {
+          console.warn('Cover upload notice:', covErr);
+          finalCoverUrl = albumCoverPreview || '';
+        }
+      }
+
+      // 2. Upload Event Photos to Appwrite Storage
+      const uploadedPhotos: string[] = [];
+      if (albumPhotoFiles.length > 0) {
+        for (let i = 0; i < albumPhotoFiles.length; i++) {
+          const file = albumPhotoFiles[i];
+          setAlbumUploadStatus(`Uploading event photo ${i + 1} of ${albumPhotoFiles.length}…`);
+          try {
+            const url = await storageService.uploadFile(file);
+            uploadedPhotos.push(url);
+          } catch (pErr) {
+            console.warn(`Photo ${i + 1} upload notice:`, pErr);
+            if (albumPhotoPreviews[i]) {
+              uploadedPhotos.push(albumPhotoPreviews[i]);
+            }
+          }
+        }
+      }
+
+      // 3. Add any additional manual URLs if entered
+      if (newAlbum.photosText?.trim()) {
+        const extraUrls = newAlbum.photosText
+          .split(/[\n,]+/)
+          .map((s) => s.trim())
+          .filter(Boolean);
+        uploadedPhotos.push(...extraUrls);
+      }
+
+      // If no photos were attached, default photos to the cover
+      const finalPhotos = uploadedPhotos.length > 0 ? uploadedPhotos : [finalCoverUrl];
+
+      setAlbumUploadStatus('Saving album to database…');
+
+      await galleryService.createAlbum({
+        title: newAlbum.title,
+        category: newAlbum.category,
+        date: newAlbum.date || '2026',
+        venue: newAlbum.venue,
+        coverUrl: finalCoverUrl,
+        description: newAlbum.description,
+        photos: finalPhotos,
+        photoCount: finalPhotos.length,
+      });
+
+      resetAlbumForm();
+      loadAllData();
+    } catch (err: unknown) {
+      setAlbumError(err instanceof Error ? err.message : 'Failed to publish album');
+    } finally {
+      setSavingAlbum(false);
+      setAlbumUploadStatus(null);
+    }
   };
 
   const handleDeleteAlbum = async (id: string) => {
@@ -1149,13 +1347,23 @@ export default function AdminDashboard() {
                 <p className="text-xs text-slate-500">Publish conclaves, symposiums, and delegate passes.</p>
               </div>
               <button
-                onClick={() => setShowAddEventModal(true)}
+                onClick={() => {
+                  setEventSubmitError(null);
+                  setShowAddEventModal(true);
+                }}
                 className="inline-flex items-center gap-1.5 rounded-lg bg-[#1540a8] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#07174a] cursor-pointer"
               >
                 <PlusCircle className="h-4 w-4" />
                 <span>+ Add Chamber Event</span>
               </button>
             </div>
+
+            {eventSuccessMessage && (
+              <div className="mb-4 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 p-3.5 text-xs flex items-center gap-2 animate-in fade-in">
+                <CheckCircle className="h-4 w-4 text-emerald-600 shrink-0" />
+                <span className="font-semibold">{eventSuccessMessage}</span>
+              </div>
+            )}
 
             {/* Step-by-Step Picture Upload & Dimensions Guide */}
             <div className="mb-6 rounded-xl border border-blue-200 bg-gradient-to-r from-blue-50/80 via-indigo-50/40 to-slate-50 p-5 shadow-2xs">
@@ -2468,7 +2676,10 @@ export default function AdminDashboard() {
                     />
                     <button
                       type="button"
-                      onClick={() => setNewEvent({ ...newEvent, imageUrl: '' })}
+                      onClick={() => {
+                        setNewEvent({ ...newEvent, imageUrl: '' });
+                        setEventImageFile(null);
+                      }}
                       className="absolute top-1.5 right-1.5 rounded-full bg-black/70 hover:bg-black text-white p-1 text-[10px] cursor-pointer"
                       title="Remove picture"
                     >
@@ -2492,23 +2703,38 @@ export default function AdminDashboard() {
 
                   <input
                     type="text"
-                    value={newEvent.imageUrl.startsWith('data:') ? '' : newEvent.imageUrl}
+                    value={newEvent.imageUrl.startsWith('data:') || newEvent.imageUrl.startsWith('blob:') ? '' : newEvent.imageUrl}
                     onChange={(e) => {
                       setNewEvent({ ...newEvent, imageUrl: e.target.value });
+                      setEventImageFile(null);
                       if (eventImageError) setEventImageError(null);
                     }}
-                    placeholder={newEvent.imageUrl.startsWith('data:') ? 'Local picture chosen' : 'Or paste direct image URL (https://…)'}
+                    placeholder={newEvent.imageUrl.startsWith('data:') || newEvent.imageUrl.startsWith('blob:') ? 'Local picture chosen' : 'Or paste direct image URL (https://…)'}
                     className="flex-1 rounded-lg border border-slate-300 px-2.5 py-1.5 text-[11px] text-slate-800 focus:outline-none focus:border-[#1540a8] bg-white"
                   />
                 </div>
               </div>
 
+              {eventSubmitError && (
+                <div className="rounded-lg bg-red-50 border border-red-200 text-red-700 text-xs p-2.5 flex items-start gap-1.5 animate-in fade-in">
+                  <AlertCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+                  <span>{eventSubmitError}</span>
+                </div>
+              )}
+
               <button
                 type="submit"
-                disabled={!!eventImageError}
-                className="w-full rounded-lg bg-[#1540a8] py-2.5 text-xs font-bold text-white hover:bg-[#07174a] disabled:opacity-50 cursor-pointer"
+                disabled={!!eventImageError || savingEvent}
+                className="w-full rounded-lg bg-[#1540a8] py-2.5 text-xs font-bold text-white hover:bg-[#07174a] disabled:opacity-50 cursor-pointer flex items-center justify-center gap-2"
               >
-                Publish Event
+                {savingEvent ? (
+                  <>
+                    <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                    <span>Publishing Event…</span>
+                  </>
+                ) : (
+                  <span>Publish Event</span>
+                )}
               </button>
             </form>
           </div>
@@ -2519,9 +2745,9 @@ export default function AdminDashboard() {
       {/* Modal: Add Concluded Event Gallery Album */}
       {showAddAlbumModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
-          <div className="relative w-full max-w-lg rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
+          <div className="relative w-full max-w-2xl rounded-2xl bg-white p-6 shadow-2xl border border-slate-200 max-h-[90vh] overflow-y-auto">
             <button
-              onClick={() => setShowAddAlbumModal(false)}
+              onClick={resetAlbumForm}
               className="absolute right-4 top-4 rounded-full p-2 text-slate-400 hover:bg-slate-100 cursor-pointer"
             >
               ✕
@@ -2530,10 +2756,17 @@ export default function AdminDashboard() {
               Add Concluded Event to Gallery
             </h3>
             <p className="text-xs text-slate-500 mt-0.5">
-              Create a dedicated photo gallery section for this concluded event.
+              Create a dedicated photo gallery section with direct image uploads from your device.
             </p>
 
-            <form onSubmit={handleCreateAlbum} className="mt-4 space-y-3 text-xs">
+            {albumError && (
+              <div className="mt-3 rounded-lg bg-red-50 border border-red-200 p-2.5 text-xs text-red-700 font-medium flex items-start gap-2">
+                <AlertCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+                <span>{albumError}</span>
+              </div>
+            )}
+
+            <form onSubmit={handleCreateAlbum} className="mt-4 space-y-4 text-xs">
               <div>
                 <label className="block font-semibold text-slate-700 mb-1">Event Title *</label>
                 <input
@@ -2585,16 +2818,77 @@ export default function AdminDashboard() {
                 />
               </div>
 
+              {/* Cover Image Upload */}
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">Cover Image URL *</label>
-                <input
-                  type="url"
-                  required
-                  value={newAlbum.coverUrl}
-                  onChange={(e) => setNewAlbum({ ...newAlbum, coverUrl: e.target.value })}
-                  placeholder="https://images.unsplash.com/... or /images/..."
-                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800"
-                />
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-slate-700">Cover Photo *</label>
+                  <span className="text-[10px] font-semibold text-slate-500 bg-slate-100 px-2 py-0.5 rounded">
+                    Max 5 MB • 1 Photo
+                  </span>
+                </div>
+
+                {albumCoverPreview || newAlbum.coverUrl ? (
+                  <div className="relative rounded-xl border border-stone-300 overflow-hidden bg-stone-50 p-2 flex items-center gap-3">
+                    <div className="relative h-16 w-24 rounded-lg overflow-hidden shrink-0 bg-stone-200">
+                      <img
+                        src={albumCoverPreview || newAlbum.coverUrl}
+                        alt="Cover preview"
+                        className="h-full w-full object-cover"
+                      />
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-xs font-bold text-slate-800 truncate">
+                        {albumCoverFile ? albumCoverFile.name : 'Cover photo URL specified'}
+                      </p>
+                      <p className="text-[11px] text-slate-500">
+                        {albumCoverFile
+                          ? `${(albumCoverFile.size / 1024).toFixed(0)} KB • Ready for upload`
+                          : 'Direct image link'}
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={handleRemoveAlbumCover}
+                      className="rounded-lg bg-red-50 hover:bg-red-100 text-red-600 px-2.5 py-1 text-xs font-bold transition-colors cursor-pointer"
+                    >
+                      ✕ Remove
+                    </button>
+                  </div>
+                ) : (
+                  <div className="space-y-2">
+                    <label className="flex flex-col items-center justify-center rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/70 p-4 hover:bg-amber-50/40 hover:border-amber-400 transition-all cursor-pointer">
+                      <UploadCloud className="h-6 w-6 text-slate-400 mb-1" />
+                      <span className="text-xs font-bold text-[#1540a8]">Choose Cover Photo File</span>
+                      <span className="text-[10px] text-slate-400 mt-0.5">
+                        Direct upload from device (Max 5 MB)
+                      </span>
+                      <input
+                        type="file"
+                        accept="image/*"
+                        onChange={handleAlbumCoverChange}
+                        className="hidden"
+                      />
+                    </label>
+                    <div className="flex items-center justify-between text-[11px]">
+                      <button
+                        type="button"
+                        onClick={() => setShowCoverUrlInput(!showCoverUrlInput)}
+                        className="text-slate-500 hover:text-slate-800 underline"
+                      >
+                        {showCoverUrlInput ? 'Hide URL field' : 'Or enter image URL instead'}
+                      </button>
+                    </div>
+                    {showCoverUrlInput && (
+                      <input
+                        type="url"
+                        value={newAlbum.coverUrl}
+                        onChange={(e) => setNewAlbum({ ...newAlbum, coverUrl: e.target.value })}
+                        placeholder="https://images.unsplash.com/... or /images/..."
+                        className="w-full rounded-lg border border-slate-300 p-2 text-xs text-slate-800"
+                      />
+                    )}
+                  </div>
+                )}
               </div>
 
               <div>
@@ -2609,27 +2903,104 @@ export default function AdminDashboard() {
                 />
               </div>
 
+              {/* Event Photos Multiple Direct Upload */}
               <div>
-                <label className="block font-semibold text-slate-700 mb-1">
-                  Event Photo URLs (one per line or comma separated)
-                </label>
-                <textarea
-                  rows={4}
-                  value={newAlbum.photosText}
-                  onChange={(e) => setNewAlbum({ ...newAlbum, photosText: e.target.value })}
-                  placeholder="https://images.unsplash.com/photo-1&#10;https://images.unsplash.com/photo-2&#10;https://images.unsplash.com/photo-3"
-                  className="w-full rounded-lg border border-slate-300 p-2.5 text-xs text-slate-800 font-mono"
-                />
-                <span className="text-[10px] text-slate-400">
-                  If empty, the cover image will be used as the first photo in the gallery.
-                </span>
+                <div className="flex items-center justify-between mb-1">
+                  <label className="block font-semibold text-slate-700">
+                    Event Photos (Direct Upload)
+                  </label>
+                  <span className="text-[10px] font-bold text-[#1540a8] bg-blue-50 px-2.5 py-0.5 rounded-full border border-blue-200">
+                    {albumPhotoFiles.length} / {MAX_ALBUM_PHOTOS_LIMIT} Selected
+                  </span>
+                </div>
+                <p className="text-[11px] text-slate-500 mb-2">
+                  Upload multiple pictures from the event (up to {MAX_ALBUM_PHOTOS_LIMIT} photos, max 5 MB each).
+                </p>
+
+                {albumPhotoFiles.length < MAX_ALBUM_PHOTOS_LIMIT ? (
+                  <label className="inline-flex items-center gap-2 rounded-xl border-2 border-dashed border-slate-300 bg-slate-50/70 px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-blue-50/50 hover:border-[#1540a8] hover:text-[#1540a8] transition-all cursor-pointer">
+                    <Images className="h-4 w-4 text-[#1540a8]" />
+                    <span>
+                      + Choose Photos from Device ({MAX_ALBUM_PHOTOS_LIMIT - albumPhotoFiles.length} slots left)
+                    </span>
+                    <input
+                      type="file"
+                      accept="image/*"
+                      multiple
+                      onChange={handleAlbumPhotosChange}
+                      className="hidden"
+                    />
+                  </label>
+                ) : (
+                  <div className="rounded-lg bg-amber-50 border border-amber-200 p-2 text-[11px] text-amber-800 font-semibold">
+                    Maximum limit of {MAX_ALBUM_PHOTOS_LIMIT} photos reached for this album.
+                  </div>
+                )}
+
+                {/* Thumbnails preview grid */}
+                {albumPhotoPreviews.length > 0 && (
+                  <div className="mt-2.5 rounded-xl border border-slate-200 bg-slate-50/60 p-2.5">
+                    <div className="grid grid-cols-3 sm:grid-cols-5 gap-2 max-h-48 overflow-y-auto pr-1">
+                      {albumPhotoPreviews.map((previewUrl, i) => (
+                        <div
+                          key={i}
+                          className="group relative h-20 rounded-lg overflow-hidden border border-slate-300 bg-black/10 shadow-2xs"
+                        >
+                          <img
+                            src={previewUrl}
+                            alt={`Photo preview ${i + 1}`}
+                            className="h-full w-full object-cover"
+                          />
+                          <span className="absolute bottom-1 left-1 rounded bg-black/75 px-1 py-0.2 text-[9px] font-mono font-bold text-white">
+                            #{i + 1}
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveAlbumPhoto(i)}
+                            className="absolute top-1 right-1 h-5 w-5 rounded-full bg-red-600 hover:bg-red-700 text-white flex items-center justify-center text-[10px] font-bold shadow cursor-pointer transition-transform hover:scale-110"
+                            title="Remove photo"
+                          >
+                            ✕
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                <div className="mt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowPhotoUrlInput(!showPhotoUrlInput)}
+                    className="text-[11px] text-slate-500 hover:text-slate-800 underline"
+                  >
+                    {showPhotoUrlInput ? 'Hide manual URLs field' : 'Or paste additional photo URLs manually'}
+                  </button>
+                  {showPhotoUrlInput && (
+                    <textarea
+                      rows={3}
+                      value={newAlbum.photosText}
+                      onChange={(e) => setNewAlbum({ ...newAlbum, photosText: e.target.value })}
+                      placeholder="https://images.unsplash.com/photo-1&#10;https://images.unsplash.com/photo-2"
+                      className="w-full rounded-lg border border-slate-300 p-2 text-xs text-slate-800 font-mono mt-1"
+                    />
+                  )}
+                </div>
               </div>
 
               <button
                 type="submit"
-                className="w-full rounded-lg bg-[#1540a8] py-2.5 text-xs font-bold text-white hover:bg-[#07174a] cursor-pointer mt-2"
+                disabled={savingAlbum}
+                className="w-full rounded-xl bg-[#1540a8] py-3 text-xs font-bold text-white hover:bg-[#07174a] transition-all cursor-pointer mt-2 disabled:opacity-60 flex items-center justify-center gap-2 shadow-md"
               >
-                Save Event to Gallery
+                {savingAlbum ? (
+                  <>
+                    <div className="h-4 w-4 animate-spin rounded-full border-2 border-white border-r-transparent" />
+                    <span>{albumUploadStatus || 'Uploading & Saving Album…'}</span>
+                  </>
+                ) : (
+                  <span>Save Event to Gallery</span>
+                )}
               </button>
             </form>
           </div>
