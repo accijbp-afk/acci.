@@ -6,7 +6,7 @@ import Image from 'next/image';
 import { useRouter } from 'next/navigation';
 import { authService } from '@/services/appwrite/auth';
 import { notificationService } from '@/services/notifications';
-import { User, Mail, Lock, Phone, MapPin, ArrowRight } from 'lucide-react';
+import { User, Mail, Lock, Phone, MapPin, ArrowRight, AlertCircle, ExternalLink } from 'lucide-react';
 
 export default function RegisterPage() {
   const router = useRouter();
@@ -90,8 +90,31 @@ export default function RegisterPage() {
         </div>
 
         {error && (
-          <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-red-700 text-xs font-semibold mb-4">
-            {error}
+          <div className="rounded-xl bg-red-50 border border-red-200 p-3.5 text-red-700 text-xs mb-4">
+            <div className="flex items-start gap-2">
+              <AlertCircle className="h-4 w-4 text-red-600 shrink-0 mt-0.5" />
+              <div className="flex-1">
+                <p className="font-semibold">{error}</p>
+                {error.toLowerCase().includes('paused') && (
+                  <div className="mt-2.5 pt-2.5 border-t border-red-200/80 text-[11px] text-red-900 space-y-1.5 leading-relaxed">
+                    <p>
+                      <strong>Why this happened:</strong> The Appwrite Cloud backend is paused by Appwrite due to free-tier inactivity.
+                    </p>
+                    <div className="mt-2">
+                      <a
+                        href="https://cloud.appwrite.io/console"
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-700 text-white font-medium hover:bg-red-800 transition-colors shadow-sm"
+                      >
+                        Open Appwrite Console to Restore
+                        <ExternalLink className="h-3 w-3" />
+                      </a>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 

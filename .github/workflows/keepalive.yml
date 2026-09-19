@@ -1,0 +1,17 @@
+name: Keep Appwrite Project Active
+
+on:
+  schedule:
+    # Run every 3 days at 00:00 UTC to prevent Appwrite inactivity pause
+    - cron: '0 0 */3 * *'
+  workflow_dispatch: # Allows manual trigger from GitHub Actions UI
+
+jobs:
+  ping-appwrite:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Ping Appwrite Health Endpoint
+        run: |
+          echo "Pinging ACCI Appwrite Cloud backend to maintain active status..."
+          curl -s -o /dev/null -w "%{http_code}" -H "X-Appwrite-Project: 6a9aca980006903a5a9d" "https://fra.cloud.appwrite.io/v1/health"
+          echo "Ping complete."
