@@ -14,9 +14,46 @@ export const authService = {
   }): Promise<UserProfile> {
     if (isAppwriteConfigured()) {
       try {
-        const userId = ID.unique();
-        await account.create(userId, data.email, data.password, data.name);
-        await account.createEmailPasswordSession(data.email, data.password);
+        // Clear any existing active session so the new registrant can establish their own session
+        try {
+          await account.deleteSession('current');
+        } catch {
+          // No active session, safe to continue
+        }
+
+        let userId = ID.unique();
+        let userAlreadyExists = false;
+
+        try {
+          await account.create(userId, data.email, data.password, data.name);
+        } catch (createErr: unknown) {
+          const createMsg = createErr instanceof Error ? createErr.message : '';
+          if (createMsg.toLowerCase().includes('already exists')) {
+            userAlreadyExists = true;
+          } else {
+            throw createErr;
+          }
+        }
+
+        // Establish session
+        try {
+          await account.createEmailPasswordSession(data.email, data.password);
+        } catch (sessErr: unknown) {
+          const sessMsg = sessErr instanceof Error ? sessErr.message.toLowerCase() : '';
+          if (sessMsg.includes('session is active') || sessMsg.includes('prohibited') || sessMsg.includes('already active')) {
+            await account.deleteSession('current').catch(() => {});
+            await account.createEmailPasswordSession(data.email, data.password);
+          } else if (userAlreadyExists) {
+            throw new Error('An account with this email address already exists. Please sign in instead.');
+          } else {
+            throw sessErr;
+          }
+        }
+
+        const currentUser = await account.get().catch(() => null);
+        if (currentUser) {
+          userId = currentUser.$id;
+        }
 
         const profile: UserProfile = {
           userId,
@@ -115,8 +152,15 @@ export const authService = {
         try {
           await account.createEmailPasswordSession(email, password);
         } catch (e: unknown) {
-          // If session already exists, continue
-          if (!(e instanceof Error && e.message.includes('session already active'))) {
+          const msg = e instanceof Error ? e.message.toLowerCase() : '';
+          if (
+            msg.includes('session is active') ||
+            msg.includes('prohibited') ||
+            msg.includes('already active')
+          ) {
+            await account.deleteSession('current').catch(() => {});
+            await account.createEmailPasswordSession(email, password);
+          } else {
             throw e;
           }
         }
