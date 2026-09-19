@@ -136,6 +136,48 @@ async function main() {
         });
     }
 
+    // 2c. Ensure Impact Stories Collection Attributes
+    console.log('\n2c. Ensuring Impact Stories Collection Attributes...');
+    const storyStringAttributes = [
+      { key: 'id', size: 100, required: false },
+      { key: 'title', size: 255, required: true },
+      { key: 'authorName', size: 255, required: true },
+      { key: 'businessName', size: 255, required: true },
+      { key: 'roleOrDesignation', size: 255, required: false },
+      { key: 'benefitCategory', size: 100, required: false },
+      { key: 'story', size: 5000, required: true },
+      { key: 'imageUrl', size: 1000, required: false },
+      { key: 'status', size: 50, required: true },
+      { key: 'createdAt', size: 50, required: true },
+      { key: 'contactPhone', size: 50, required: false },
+      { key: 'contactEmail', size: 255, required: false },
+    ];
+
+    for (const attr of storyStringAttributes) {
+      await request(`/databases/${DATABASE_ID}/collections/impact_stories/attributes/string`, 'POST', {
+        key: attr.key,
+        size: attr.size,
+        required: attr.required,
+      }).then(() => console.log(`   ✓ Created attribute: impact_stories.${attr.key}`))
+        .catch(() => {});
+    }
+
+    await request(`/databases/${DATABASE_ID}/collections/impact_stories/attributes/boolean`, 'POST', {
+      key: 'featured',
+      required: false,
+      default: false,
+    }).then(() => console.log(`   ✓ Created attribute: impact_stories.featured`))
+      .catch(() => {});
+
+    await request(`/databases/${DATABASE_ID}/collections/impact_stories/attributes/integer`, 'POST', {
+      key: 'rating',
+      required: false,
+      min: 1,
+      max: 5,
+      default: 5,
+    }).then(() => console.log(`   ✓ Created attribute: impact_stories.rating`))
+      .catch(() => {});
+
     // 3. Create Storage Bucket
     console.log('\n3. Creating Media Storage Bucket...');
     const bucketId = process.env.NEXT_PUBLIC_APPWRITE_STORAGE_BUCKET_ID || 'acci_media';

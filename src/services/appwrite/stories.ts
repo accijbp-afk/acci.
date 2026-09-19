@@ -49,6 +49,33 @@ export const INITIAL_SEED_STORIES: ImpactStory[] = [
   },
 ];
 
+const ALLOWED_STORY_KEYS: Array<keyof ImpactStory> = [
+  'id',
+  'title',
+  'authorName',
+  'roleOrDesignation',
+  'businessName',
+  'story',
+  'benefitCategory',
+  'imageUrl',
+  'rating',
+  'featured',
+  'status',
+  'createdAt',
+  'contactPhone',
+  'contactEmail',
+];
+
+function sanitizeStoryPayload(payload: Record<string, any>): Record<string, any> {
+  const clean: Record<string, any> = {};
+  for (const key of ALLOWED_STORY_KEYS) {
+    if (payload[key] !== undefined) {
+      clean[key] = payload[key];
+    }
+  }
+  return clean;
+}
+
 const getLocalStories = (): ImpactStory[] => {
   if (typeof window === 'undefined') return INITIAL_SEED_STORIES;
   const stored = localStorage.getItem(LOCAL_STORAGE_STORIES_KEY);
@@ -74,6 +101,28 @@ const saveLocalStories = (stories: ImpactStory[]) => {
   }
 };
 
+async function resolveAppwriteDocId(id: string): Promise<string | null> {
+  try {
+    const doc = await databases.getDocument(
+      APPWRITE_CONFIG.databaseId,
+      APPWRITE_CONFIG.collections.stories,
+      id
+    );
+    return doc.$id;
+  } catch {
+    try {
+      const found = await databases.listDocuments(
+        APPWRITE_CONFIG.databaseId,
+        APPWRITE_CONFIG.collections.stories,
+        [Query.equal('id', id), Query.limit(1)]
+      );
+      return found.documents[0]?.$id || null;
+    } catch {
+      return null;
+    }
+  }
+}
+
 export const storiesService = {
   async getFeaturedStories(): Promise<ImpactStory[]> {
     if (isAppwriteConfigured()) {
@@ -85,10 +134,12 @@ export const storiesService = {
             Query.equal('status', 'approved'),
             Query.equal('featured', true),
             Query.orderDesc('createdAt'),
-            Query.limit(10),
+            Query.limit(20),
           ]
         );
-        return res.documents as unknown as ImpactStory[];
+        if (res.documents && res.documents.length > 0) {
+          return res.documents as unknown as ImpactStory[];
+        }
       } catch (err) {
         console.warn('Appwrite stories fetch error, using local storage fallback', err);
       }
@@ -98,6 +149,7 @@ export const storiesService = {
   },
 
   async getAllStoriesAdmin(): Promise<ImpactStory[]> {
+    let remoteStories: ImpactStory[] = [];
     if (isAppwriteConfigured()) {
       try {
         const res = await databases.listDocuments(
@@ -105,12 +157,29 @@ export const storiesService = {
           APPWRITE_CONFIG.collections.stories,
           [Query.orderDesc('createdAt'), Query.limit(100)]
         );
-        return res.documents as unknown as ImpactStory[];
+        remoteStories = (res.documents || []) as unknown as ImpactStory[];
       } catch (err) {
         console.warn('Appwrite admin stories fetch error, using local storage fallback', err);
       }
     }
-    return getLocalStories();
+
+    const localStories = getLocalStories();
+
+    // Deduplicate and merge remote + local stories
+    const combinedMap = new Map<string, ImpactStory>();
+    for (const story of localStories) {
+      const key = story.$id || story.id;
+      if (key) combinedMap.set(key, story);
+    }
+    for (const story of remoteStories) {
+      const key = story.$id || story.id;
+      if (key) combinedMap.set(key, story);
+      if (story.id) combinedMap.set(story.id, story);
+    }
+
+    const result = Array.from(new Set(combinedMap.values()));
+    saveLocalStories(result);
+    return result;
   },
 
   async createStory(
@@ -119,45 +188,53 @@ export const storiesService = {
       featured?: boolean;
     }
   ): Promise<ImpactStory> {
+    const generatedId = 'STORY_' + Date.now();
     const newStory: ImpactStory = {
       ...data,
-      id: 'STORY_' + Date.now(),
+      id: generatedId,
       status: data.status || 'pending',
       featured: Boolean(data.featured),
       createdAt: new Date().toISOString().split('T')[0],
     };
 
+    let createdResult: ImpactStory = newStory;
+
     if (isAppwriteConfigured()) {
       try {
+        const sanitized = sanitizeStoryPayload(newStory);
         const res = await databases.createDocument(
           APPWRITE_CONFIG.databaseId,
           APPWRITE_CONFIG.collections.stories,
           ID.unique(),
-          newStory
+          sanitized
         );
-        return res as unknown as ImpactStory;
+        createdResult = res as unknown as ImpactStory;
       } catch (err) {
-        console.warn('Appwrite createStory error, storing locally', err);
+        console.warn('Appwrite createStory notice, falling back to local:', err);
       }
     }
 
     const list = getLocalStories();
-    list.unshift(newStory);
-    saveLocalStories(list);
-    return newStory;
+    const cleanList = list.filter((s) => s.id !== createdResult.id && s.$id !== createdResult.$id);
+    cleanList.unshift(createdResult);
+    saveLocalStories(cleanList);
+    return createdResult;
   },
 
   async updateStoryStatus(id: string, status: 'approved' | 'pending' | 'rejected'): Promise<boolean> {
     if (isAppwriteConfigured()) {
       try {
-        await databases.updateDocument(
-          APPWRITE_CONFIG.databaseId,
-          APPWRITE_CONFIG.collections.stories,
-          id,
-          { status }
-        );
-      } catch {
-        // Fallback to local
+        const docId = await resolveAppwriteDocId(id);
+        if (docId) {
+          await databases.updateDocument(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.stories,
+            docId,
+            { status }
+          );
+        }
+      } catch (err) {
+        console.warn('Appwrite updateStoryStatus error:', err);
       }
     }
 
@@ -173,14 +250,18 @@ export const storiesService = {
   async updateStory(id: string, updates: Partial<ImpactStory>): Promise<boolean> {
     if (isAppwriteConfigured()) {
       try {
-        await databases.updateDocument(
-          APPWRITE_CONFIG.databaseId,
-          APPWRITE_CONFIG.collections.stories,
-          id,
-          updates
-        );
+        const docId = await resolveAppwriteDocId(id);
+        if (docId) {
+          const sanitized = sanitizeStoryPayload(updates);
+          await databases.updateDocument(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.stories,
+            docId,
+            sanitized
+          );
+        }
       } catch (err) {
-        console.warn('Appwrite updateStory error, fallback to local', err);
+        console.warn('Appwrite updateStory error:', err);
       }
     }
 
@@ -196,14 +277,17 @@ export const storiesService = {
   async toggleFeatureStory(id: string, featured: boolean): Promise<boolean> {
     if (isAppwriteConfigured()) {
       try {
-        await databases.updateDocument(
-          APPWRITE_CONFIG.databaseId,
-          APPWRITE_CONFIG.collections.stories,
-          id,
-          { featured }
-        );
-      } catch {
-        // Fallback to local
+        const docId = await resolveAppwriteDocId(id);
+        if (docId) {
+          await databases.updateDocument(
+            APPWRITE_CONFIG.databaseId,
+            APPWRITE_CONFIG.collections.stories,
+            docId,
+            { featured }
+          );
+        }
+      } catch (err) {
+        console.warn('Appwrite toggleFeatureStory error:', err);
       }
     }
 
@@ -219,26 +303,13 @@ export const storiesService = {
   async deleteStory(id: string): Promise<boolean> {
     if (isAppwriteConfigured()) {
       try {
-        let docId = id;
-        try {
+        const docId = await resolveAppwriteDocId(id);
+        if (docId) {
           await databases.deleteDocument(
             APPWRITE_CONFIG.databaseId,
             APPWRITE_CONFIG.collections.stories,
             docId
           );
-        } catch {
-          const found = await databases.listDocuments(
-            APPWRITE_CONFIG.databaseId,
-            APPWRITE_CONFIG.collections.stories,
-            [Query.equal('id', id), Query.limit(1)]
-          );
-          if (found.documents.length > 0) {
-            await databases.deleteDocument(
-              APPWRITE_CONFIG.databaseId,
-              APPWRITE_CONFIG.collections.stories,
-              found.documents[0].$id
-            );
-          }
         }
       } catch (err) {
         console.warn('Appwrite delete story error:', err);
