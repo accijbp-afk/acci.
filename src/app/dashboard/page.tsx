@@ -57,19 +57,24 @@ export default function MemberDashboard() {
       }
       setUser(currentUser);
 
-      // Load businesses associated with current user or fallback
+      // Load businesses associated only with the current user
       membersService.getMembers({ status: 'all' }).then((res) => {
-        const found =
-          res.members.find(
-            (m) =>
-              m.userId === currentUser.userId ||
-              m.ownerName.toLowerCase().includes(currentUser.name.toLowerCase().split(' ')[0])
-          ) || res.members[0];
+        const found = res.members.find(
+          (m) =>
+            (m.userId && currentUser.userId && m.userId === currentUser.userId) ||
+            (currentUser.email && m.email && m.email.trim().toLowerCase() === currentUser.email.trim().toLowerCase())
+        );
         setMyBusiness(found || null);
       });
 
+      // Load only jobs posted by the current user
       jobsService.getJobs().then((jbs) => {
-        setMyJobs(jbs.slice(0, 2));
+        const userJobs = jbs.filter(
+          (j) =>
+            (j.userId && currentUser.userId && j.userId === currentUser.userId) ||
+            (currentUser.email && j.contactEmail && j.contactEmail.trim().toLowerCase() === currentUser.email.trim().toLowerCase())
+        );
+        setMyJobs(userJobs);
       });
 
       setLoading(false);
@@ -280,7 +285,7 @@ export default function MemberDashboard() {
                   {user.name}
                 </h1>
                 <span className="rounded bg-amber-100 text-amber-900 px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider">
-                  {user.role} Member
+                  {user.role === 'admin' ? 'Chamber Administrator' : 'Chamber Member'}
                 </span>
               </div>
               <p className="text-xs text-slate-500 mt-0.5">{user.email} • {user.city || 'Jabalpur'}</p>
@@ -714,29 +719,50 @@ export default function MemberDashboard() {
                 <p className="text-xs text-slate-500">Positions posted from your enterprise.</p>
               </div>
               <Link
-                href="/jobs"
-                className="inline-flex items-center gap-1 rounded-lg bg-[#1540a8] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#07174a]"
+                href="/jobs/post"
+                className="inline-flex items-center gap-1.5 rounded-lg bg-[#1540a8] px-3.5 py-1.5 text-xs font-bold text-white hover:bg-[#07174a] transition-colors"
               >
                 <PlusCircle className="h-3.5 w-3.5" />
                 <span>+ Post New Job</span>
               </Link>
             </div>
 
-            <div className="space-y-4">
-              {myJobs.map((j) => (
-                <div key={j.id} className="rounded-xl border border-slate-200 p-4 text-xs flex items-center justify-between gap-4">
-                  <div>
-                    <h3 className="font-bold text-[#07174a] text-sm">{j.title}</h3>
-                    <div className="text-slate-500 mt-0.5">
-                      {j.company} • 📍 {j.location} • 💰 {j.salary}
+            {myJobs.length > 0 ? (
+              <div className="space-y-4">
+                {myJobs.map((j) => (
+                  <div key={j.id} className="rounded-xl border border-slate-200 p-4 text-xs flex items-center justify-between gap-4">
+                    <div>
+                      <h3 className="font-bold text-[#07174a] text-sm">{j.title}</h3>
+                      <div className="text-slate-500 mt-0.5">
+                        {j.company} • 📍 {j.location} • 💰 {j.salary}
+                      </div>
                     </div>
+                    <span className="rounded bg-emerald-50 text-emerald-700 px-2 py-0.5 font-bold border border-emerald-200">
+                      {j.status}
+                    </span>
                   </div>
-                  <span className="rounded bg-emerald-50 text-emerald-700 px-2 py-0.5 font-bold border border-emerald-200">
-                    {j.status}
-                  </span>
+                ))}
+              </div>
+            ) : (
+              <div className="rounded-2xl border-2 border-dashed border-slate-200 p-8 text-center bg-slate-50/50">
+                <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-blue-50 text-blue-700 mx-auto mb-3 border border-blue-100">
+                  <Briefcase className="h-6 w-6" />
                 </div>
-              ))}
-            </div>
+                <h4 className="font-bold text-slate-800 text-sm">No Vacancies Posted Yet</h4>
+                <p className="text-xs text-slate-500 mt-1 max-w-sm mx-auto">
+                  You haven&apos;t posted any job vacancies from your enterprise account yet. List openings to hire qualified professionals from the Jabalpur trade community.
+                </p>
+                <div className="mt-4">
+                  <Link
+                    href="/jobs/post"
+                    className="inline-flex items-center gap-1.5 rounded-xl bg-[#1540a8] px-4 py-2 text-xs font-bold text-white hover:bg-[#07174a] transition-all shadow-sm"
+                  >
+                    <PlusCircle className="h-4 w-4" />
+                    <span>Post a Vacancy Now</span>
+                  </Link>
+                </div>
+              </div>
+            )}
           </div>
         )}
       </div>

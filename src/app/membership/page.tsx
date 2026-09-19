@@ -1,15 +1,18 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
+import { authService } from '@/services/appwrite/auth';
 import { membersService } from '@/services/appwrite/members';
 import { notificationService } from '@/services/notifications';
 import { SEED_CATEGORIES, SEED_INDUSTRIES } from '@/services/seedData';
+import { UserProfile } from '@/types';
 
 export default function MembershipPage() {
   const [submitting, setSubmitting] = useState(false);
   const [submittedId, setSubmittedId] = useState<string | null>(null);
   const [errorMsg, setErrorMsg] = useState('');
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 
   const [form, setForm] = useState({
     businessName: '',
@@ -37,6 +40,21 @@ export default function MembershipPage() {
     consent: false,
   });
 
+  useEffect(() => {
+    authService.getCurrentUser().then((u) => {
+      if (u) {
+        setCurrentUser(u);
+        setForm((prev) => ({
+          ...prev,
+          ownerName: prev.ownerName || u.name,
+          email: prev.email || u.email,
+          phone: prev.phone || u.phone || '',
+          city: prev.city || u.city || 'Jabalpur',
+        }));
+      }
+    });
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!form.consent) {
@@ -48,6 +66,7 @@ export default function MembershipPage() {
 
     try {
       const res = await membersService.createMember({
+        userId: currentUser?.userId,
         businessName: form.businessName,
         legalName: form.legalName,
         ownerName: form.ownerName,

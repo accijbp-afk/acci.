@@ -1,11 +1,13 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter } from 'next/navigation';
+import { authService } from '@/services/appwrite/auth';
 import { jobsService } from '@/services/appwrite/jobs';
 import { notificationService } from '@/services/notifications';
+import { UserProfile } from '@/types';
 import { Briefcase, ArrowLeft, CheckCircle2, ShieldCheck } from 'lucide-react';
 
 const JOB_CATEGORIES = [
@@ -23,6 +25,7 @@ export default function PostJobPage() {
   const router = useRouter();
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState(false);
+  const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [formData, setFormData] = useState({
     title: '',
     company: '',
@@ -37,11 +40,27 @@ export default function PostJobPage() {
     contactWhatsApp: '',
   });
 
+  useEffect(() => {
+    authService.getCurrentUser().then((u) => {
+      if (u) {
+        setCurrentUser(u);
+        setFormData((prev) => ({
+          ...prev,
+          contactEmail: prev.contactEmail || u.email,
+          contactWhatsApp: prev.contactWhatsApp || u.phone || '',
+        }));
+      }
+    });
+  }, []);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSubmitting(true);
     try {
-      const created = await jobsService.createJob(formData);
+      const created = await jobsService.createJob({
+        ...formData,
+        userId: currentUser?.userId,
+      });
       setSuccess(true);
 
       // Notify Admin at accijbp@gmail.com
