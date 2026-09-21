@@ -13,6 +13,7 @@ import { MemberBusiness, JobListing, GalleryAlbum } from '@/types';
 import { getBusinessBanner } from '@/utils/businessImage';
 import ImpactStoriesSection from '@/components/home/ImpactStoriesSection';
 import FeatureBusinessSection from '@/components/home/FeatureBusinessSection';
+import UpcomingEventsSection from '@/components/home/UpcomingEventsSection';
 import {
   Search,
   CheckCircle2,
@@ -402,6 +403,9 @@ export default function HomePage() {
         )}
       </div>
     </section>
+
+      {/* ── 4.5 UPCOMING EVENTS & CONCLAVES ──────────────────────── */}
+      <UpcomingEventsSection />
 
       {/* ── 5. GALLERY GLIMPSE (CONCLUDED EVENTS) ───────────────────── */}
       <section className="py-16 bg-[#07174a] text-white border-b border-amber-500/30">

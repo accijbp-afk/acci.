@@ -30,6 +30,8 @@ import {
   Images,
   Briefcase,
   Mail,
+  Phone,
+  MessageSquare,
   Star,
   MessageSquareQuote,
   Sparkles,
@@ -1594,40 +1596,120 @@ export default function AdminDashboard() {
         {/* TAB 6: INQUIRIES INBOX */}
         {activeTab === 'inquiries' && (
           <div className="rounded-2xl border border-slate-200 bg-white p-6 shadow-sm">
-            <h2 className="font-serif-heading text-lg font-bold text-[#07174a] mb-1">
-              Contact Inquiries Inbox
-            </h2>
-            <p className="text-xs text-slate-500 mb-6">Messages received from the contact page and partnership requests.</p>
+            <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-6">
+              <div>
+                <h2 className="font-serif-heading text-lg font-bold text-[#07174a]">
+                  Contact &amp; Spotlight Inquiries Inbox
+                </h2>
+                <p className="text-xs text-slate-500 mt-0.5">
+                  Messages received from public contact inquiries and Homepage Spotlight feature requests.
+                </p>
+              </div>
+              <button
+                onClick={loadAllData}
+                className="inline-flex items-center gap-1.5 rounded-lg border border-slate-200 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-100 cursor-pointer self-start sm:self-auto transition-colors"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                <span>Refresh Inbox</span>
+              </button>
+            </div>
 
             {inquiries.length === 0 ? (
-              <p className="text-xs text-slate-400 italic">No inquiries received yet.</p>
+              <div className="text-center py-12 text-xs text-slate-400">
+                <Mail className="h-8 w-8 text-slate-300 mx-auto mb-2" />
+                No inquiries or spotlight requests received yet.
+              </div>
             ) : (
               <div className="space-y-4">
-                {inquiries.map((inq) => (
-                  <div key={inq.id} className="rounded-xl border border-slate-200 p-5 text-xs bg-slate-50/50">
-                    <div className="flex items-center justify-between border-b border-slate-200 pb-2 mb-3">
-                      <div>
-                        <strong className="text-[#07174a] text-sm">{inq.name}</strong>
-                        <span className="text-slate-500 ml-2 font-mono">{inq.phone} • {inq.email}</span>
+                {inquiries.map((inq) => {
+                  const isSpotlight =
+                    inq.subject?.toLowerCase().includes('spotlight') ||
+                    inq.subject?.toLowerCase().includes('feature') ||
+                    inq.message?.toLowerCase().includes('business/enterprise');
+
+                  return (
+                    <div
+                      key={inq.$id || inq.id}
+                      className={`rounded-xl border p-5 text-xs transition-all ${
+                        isSpotlight
+                          ? 'border-amber-300 bg-amber-50/30 shadow-xs'
+                          : 'border-slate-200 bg-slate-50/50'
+                      }`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-200 pb-3 mb-3">
+                        <div className="flex items-center gap-2.5 flex-wrap">
+                          <strong className="text-[#07174a] text-sm font-bold">{inq.name}</strong>
+                          {isSpotlight && (
+                            <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold uppercase tracking-wider bg-amber-100 text-amber-900 border border-amber-300">
+                              <Sparkles className="h-3 w-3 text-amber-600" />
+                              Homepage Spotlight Request
+                            </span>
+                          )}
+                          <span className="text-slate-500 font-mono text-[11px]">
+                            {inq.phone} • {inq.email}
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <span className="text-[10px] uppercase font-bold text-slate-400">
+                            {new Date(inq.createdAt).toLocaleString('en-IN', {
+                              dateStyle: 'medium',
+                              timeStyle: 'short',
+                            })}
+                          </span>
+                          <button
+                            onClick={() => handleDeleteInquiry(inq.$id || inq.id)}
+                            className="rounded bg-red-50 border border-red-200 px-2 py-1 text-[11px] font-bold text-red-700 hover:bg-red-600 hover:text-white cursor-pointer inline-flex items-center gap-1 transition-colors ml-2"
+                            title="Delete inquiry"
+                          >
+                            <Trash2 className="h-3 w-3" />
+                            <span>Delete</span>
+                          </button>
+                        </div>
                       </div>
-                      <div className="flex items-center gap-3">
-                        <span className="text-[10px] uppercase font-bold text-slate-400">
-                          {new Date(inq.createdAt).toLocaleDateString()}
-                        </span>
-                        <button
-                          onClick={() => handleDeleteInquiry(inq.$id || inq.id)}
-                          className="rounded bg-red-50 border border-red-200 px-2 py-1 text-[11px] font-bold text-red-700 hover:bg-red-600 hover:text-white cursor-pointer inline-flex items-center gap-1 transition-colors"
-                          title="Delete inquiry"
-                        >
-                          <Trash2 className="h-3 w-3" />
-                          <span>Delete</span>
-                        </button>
+
+                      <div className="font-bold text-slate-800 mb-2 flex items-center gap-2">
+                        <span className="text-slate-400 font-normal">Subject:</span> {inq.subject}
+                      </div>
+
+                      <div className="bg-white rounded-lg p-3.5 border border-slate-200 text-slate-700 whitespace-pre-wrap leading-relaxed font-sans mb-3 text-xs">
+                        {inq.message}
+                      </div>
+
+                      {/* Quick Contact Action Buttons */}
+                      <div className="flex items-center gap-2 flex-wrap pt-1">
+                        {inq.phone && (
+                          <>
+                            <a
+                              href={`tel:${inq.phone}`}
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold text-[11px] transition-colors"
+                            >
+                              <Phone className="h-3 w-3 text-[#1540a8]" />
+                              <span>Call {inq.phone}</span>
+                            </a>
+                            <a
+                              href={`https://wa.me/${inq.phone.replace(/[^0-9]/g, '')}`}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-emerald-200 bg-emerald-50 hover:bg-emerald-100 text-emerald-800 font-semibold text-[11px] transition-colors"
+                            >
+                              <MessageSquare className="h-3 w-3 text-emerald-600" />
+                              <span>WhatsApp</span>
+                            </a>
+                          </>
+                        )}
+                        {inq.email && (
+                          <a
+                            href={`mailto:${inq.email}?subject=Re: ${encodeURIComponent(inq.subject)}`}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-700 font-semibold text-[11px] transition-colors"
+                          >
+                            <Mail className="h-3 w-3 text-[#1540a8]" />
+                            <span>Reply via Email</span>
+                          </a>
+                        )}
                       </div>
                     </div>
-                    <div className="font-bold text-slate-700 mb-1">Subject: {inq.subject}</div>
-                    <p className="text-slate-600 whitespace-pre-wrap leading-relaxed">{inq.message}</p>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>
